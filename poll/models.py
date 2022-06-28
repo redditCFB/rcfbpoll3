@@ -1,3 +1,4 @@
+from django.contrib import admin
 from django.db import models
 from django.utils import timezone
 
@@ -10,12 +11,14 @@ class User(models.Model):
         return self.username
 
     @property
+    @admin.display(boolean=True, description='Voter?')
     def is_voter(self):
         return UserRole.objects.filter(
             user=self, role=UserRole.Role.VOTER, end_date__isnull=True
         )
 
     @property
+    @admin.display(boolean=True, description='Provisional?')
     def is_provisional_voter(self):
         return UserRole.objects.filter(
             user=self, role=UserRole.Role.PROVISIONAL, end_date__isnull=True
@@ -39,8 +42,18 @@ class UserSecondaryAffiliation(models.Model):
 
 
 class ProvisionalUserApplication(models.Model):
+    class Status(models.IntegerChoices):
+        OPEN = 1, "Open"
+        ACCEPTED = 2, "Accepted"
+        REJECTED = 3, "Rejected"
+
     user = models.ForeignKey('User', on_delete=models.CASCADE)
     submission_date = models.DateTimeField()
+    status = models.IntegerField(choices=Status.choices)
+
+    @admin.display(description='User Page')
+    def user_page(self):
+        return 'https://reddit.com/user/%s/' % self.user.username
 
 
 class Team(models.Model):
