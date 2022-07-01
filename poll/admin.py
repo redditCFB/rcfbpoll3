@@ -52,8 +52,8 @@ admin.site.register(ProvisionalUserApplication, ApplicationAdmin)
 
 
 class TeamAdmin(admin.ModelAdmin):
-    list_display = ('handle', 'team', 'conference', 'division', 'use_for_ballot', 'short_name')
-    search_fields = ['handle', 'team', 'conference', 'short_name']
+    list_display = ('handle', 'name', 'conference', 'division', 'use_for_ballot', 'short_name')
+    search_fields = ['handle', 'name', 'conference', 'short_name']
 
 
 admin.site.register(Team, TeamAdmin)

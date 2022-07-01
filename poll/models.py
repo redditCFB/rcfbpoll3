@@ -73,7 +73,7 @@ class Team(models.Model):
 
 class Poll(models.Model):
     year = models.IntegerField()
-    week = models.CharField(40)
+    week = models.CharField(max_length=40)
     open_date = models.DateTimeField()
     close_date = models.DateTimeField()
     publish_date = models.DateTimeField()
