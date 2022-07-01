@@ -119,6 +119,7 @@ class Ballot(models.Model):
         self.save()
 
     @property
+    @admin.display(boolean=True, description='Submitted?')
     def is_submitted(self):
         return self.submission_date is not None
 
@@ -138,6 +139,7 @@ class BallotEntry(models.Model):
 
 class ResultSet(models.Model):
     poll = models.ForeignKey('Poll', on_delete=models.CASCADE)
+    time_calculated = models.DateTimeField()
     human = models.BooleanField(default=True)
     computer = models.BooleanField(default=True)
     hybrid = models.BooleanField(default=True)
@@ -155,3 +157,11 @@ class Result(models.Model):
     points = models.IntegerField()
     points_per_voter = models.FloatField()
     std_dev = models.FloatField()
+
+
+class AboutPage(models.Model):
+    page = models.CharField(max_length=64)
+    text = models.TextField()
+
+    def __str__(self):
+        return self.page
