@@ -15,14 +15,14 @@ class User(models.Model):
     def is_voter(self):
         return UserRole.objects.filter(
             user=self, role=UserRole.Role.VOTER, end_date__isnull=True
-        )
+        ).exists()
 
     @property
     @admin.display(boolean=True, description='Provisional?')
     def is_provisional_voter(self):
         return UserRole.objects.filter(
             user=self, role=UserRole.Role.PROVISIONAL, end_date__isnull=True
-        )
+        ).exists()
 
 
 class UserRole(models.Model):
@@ -77,6 +77,7 @@ class Poll(models.Model):
     open_date = models.DateTimeField()
     close_date = models.DateTimeField()
     publish_date = models.DateTimeField()
+    ap_date = models.DateTimeField()
     last_week = models.ForeignKey('Poll', blank=True, null=True, on_delete=models.SET_NULL)
 
     class Meta:

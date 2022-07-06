@@ -17,6 +17,7 @@ class SecondaryAffiliationInline(admin.TabularInline):
 
 class UserAdmin(admin.ModelAdmin):
     inlines = [RoleInline, SecondaryAffiliationInline]
+    readonly_fields = ('is_voter', 'is_provisional_voter')
     list_display = ('username', 'primary_affiliation', 'is_voter', 'is_provisional_voter')
     search_fields = ['username']
 
@@ -53,7 +54,7 @@ admin.site.register(ProvisionalUserApplication, ApplicationAdmin)
 
 class TeamAdmin(admin.ModelAdmin):
     list_display = ('handle', 'name', 'conference', 'division', 'use_for_ballot', 'short_name')
-    search_fields = ['handle', 'name', 'conference', 'short_name']
+    search_fields = ['handle', 'name', 'conference', 'division', 'short_name']
 
 
 admin.site.register(Team, TeamAdmin)
@@ -67,12 +68,14 @@ class ResultSetInline(admin.TabularInline):
 class BallotInLine(admin.TabularInline):
     model = Ballot
     show_change_link = True
+    readonly_fields = ('is_submitted',)
     fields = ('user', 'poll_type', 'is_submitted')
 
 
 class PollAdmin(admin.ModelAdmin):
     inlines = [ResultSetInline, BallotInLine]
-    list_display = ('year', 'week', 'open_date', 'publish_date')
+    list_display = ('year', 'week', 'open_date', 'publish_date', 'last_week')
+    ordering = ['publish_date']
 
 
 admin.site.register(Poll, PollAdmin)
@@ -84,8 +87,10 @@ class BallotEntryInline(admin.TabularInline):
 
 class BallotAdmin(admin.ModelAdmin):
     inlines = [BallotEntryInline]
+    readonly_fields = ('is_submitted',)
     list_display = ('poll', 'user', 'poll_type', 'is_submitted')
     search_fields = ['poll', 'user']
+    ordering = ['-poll', 'user']
 
 
 admin.site.register(Ballot, BallotAdmin)
