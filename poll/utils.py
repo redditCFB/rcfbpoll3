@@ -42,7 +42,7 @@ def _create_result_set(poll, options):
     dt_min = datetime.min
     result_set = ResultSet(
         poll=poll,
-        time_calculated=dt_min.replace(tzinfor=pytz.UTC),
+        time_calculated=dt_min.replace(tzinfo=pytz.UTC),
         human=options['human'],
         computer=options['computer'],
         hybrid=options['hybrid'],
