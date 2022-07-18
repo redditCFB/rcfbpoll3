@@ -53,3 +53,11 @@ def _create_result_set(poll, options):
     )
     result_set.save()
     return result_set.update()
+
+def get_results_comparison(poll, set_options=None):
+    this_week = get_result_set(poll, set_options)
+    if poll.last_week:
+        last_week = get_result_set(poll.last_week, set_options)
+
+    else:
+        pass
