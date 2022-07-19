@@ -183,7 +183,7 @@ class ResultSet(models.Model):
                 Result(
                     result_set=self,
                     team=Team.objects.get(pk=team_results['team']),
-                    rank=i + 1 if team_results['total_points'] != results[i - 1].points else results[i - 1].rank,
+                    rank=i + 1 if i == 0 or team_results['total_points'] != results[i - 1].points else results[i - 1].rank,
                     first_place_votes=team_results['first_place_votes'],
                     points=team_results['total_points'],
                     points_per_voter=ppv,
