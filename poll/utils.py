@@ -1,5 +1,6 @@
 from datetime import datetime
 import pytz
+
 from .models import ResultSet
 
 
@@ -54,10 +55,36 @@ def _create_result_set(poll, options):
     result_set.save()
     return result_set.update()
 
+
 def get_results_comparison(poll, set_options=None):
     this_week = get_result_set(poll, set_options)
+    results = []
+    last_week = None
     if poll.last_week:
         last_week = get_result_set(poll.last_week, set_options)
-
-    else:
-        pass
+    for result in this_week:
+        this_comparison = {
+            'team': result.team,
+            'rank': result.rank,
+            'first_place_votes': result.first_place_votes,
+            'points': result.points,
+            'points_per_voter': result.points_per_voter,
+            'std_dev': result.std_dev,
+            'votes': result.votes
+        }
+        if last_week and last_week.filter(team=result.team).exists():
+            lw_result = last_week.get(team=result.team)
+            this_comparison['rank_diff'] = rank_diff = lw_result.rank - result.rank
+            this_comparison['rank_diff_str'] = (
+                'NEW' if lw_result.rank > 25 else
+                '+%d' % rank_diff if rank_diff > 0 else
+                '%d' % rank_diff if rank_diff < 0 else
+                '--'
+            )
+            this_comparison['ppv_diff'] = result.points_per_voter - lw_result.points_per_voter
+        else:
+            this_comparison['rank_diff'] = 0
+            this_comparison['rank_diff_str'] = 'NEW'
+            this_comparison['ppv_diff'] = result.points_per_voter
+        results.append(this_comparison)
+    return results

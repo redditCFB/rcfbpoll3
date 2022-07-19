@@ -1,5 +1,5 @@
-{% extends 'poll/base.html' %}
-{% load staticfiles %}
+{% extends 'base.html' %}
+{% load static %}
 {% block content %}
 	<div class="jumbotron">
 		<div class="container" id="welcome">
@@ -30,12 +30,12 @@
                     {% for rank in top25 %}
                         <tr>
                             <td id="team-rank">{{ rank.rank }}</td>
-                            {% if rank.rank_diff == None or rank.rank|add:rank.rank_diff > 25 %}
+                            {% if rank.rank_diff_str == 'NEW' %}
                                 <td><strong>NEW</strong></td>
                             {% elif rank.rank_diff > 0 %}
-                                <td style="color: green;">+{{ rank.rank_diff }}</td>
+                                <td style="color: green;">{{ rank.rank_diff_str }}</td>
                             {% elif rank.rank_diff < 0 %}
-                                <td style="color: red;">{{ rank.rank_diff }}</td>
+                                <td style="color: red;">{{ rank.rank_diff_str }}</td>
                             {% else %}
                                 <td>--</td>
                             {% endif %}
@@ -44,8 +44,8 @@
                                 <img class="team-logo" src="{% static static_img %}">
                                 {% endwith %}
                                 {{ rank.team.name }}
-                                {% if fp_votes|lookup:rank.team.pk %}
-                                    ({{ fp_votes|lookup:rank.team.pk }})
+                                {% if rank.first_place_votes > 0 %}
+                                    ({{ rank.first_place_votes }})
                                 {% endif %}
                             </td>
                             <td id="team-points">{{ rank.points }}</td>
