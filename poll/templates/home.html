@@ -27,7 +27,7 @@
                     </tr>
                     {% for rank in top25 %}
                         <tr>
-                            <td id="team-rank">{{ rank.rank }}</td>
+                            <td id="team-rank">#{{ rank.rank }}</td>
                             {% if rank.rank_diff_str == 'NEW' %}
                                 <td><strong>NEW</strong></td>
                             {% elif rank.rank_diff > 0 %}
@@ -70,11 +70,19 @@
 				<h3>Moving Up</h3>
                 <table class="table table-striped" style="width: auto;">
                     <tr>
+                        <th>Rank</th>
                         <th>Team</th>
                         <th>Points Per Voter</th>
                     </tr>
                     {% for rank in up_movers %}
                         <tr>
+                            <td>
+                                {% if rank.rank <= 25 %}
+                                    #{{ rank.rank }}
+                                {% else %}
+                                    NR
+                                {% endif %}
+                            </td>
                             <td>
                                 {% with "images/full60/"|add:rank.team.handle|add:".png" as static_img %}
                                 <img class="team-logo" src="{% static static_img %}" alt="">
@@ -88,11 +96,19 @@
                 <h3>Falling Down</h3>
                 <table class="table table-striped" style="width: auto;">
                     <tr>
+                        <th>Rank</th>
                         <th>Team</th>
                         <th>Points Per Voter</th>
                     </tr>
                     {% for rank in down_movers %}
                         <tr>
+                            <td>
+                                {% if rank.rank <= 25 %}
+                                    #{{ rank.rank }}
+                                {% else %}
+                                    NR
+                                {% endif %}
+                            </td>
                             <td>
                                 {% with "images/full60/"|add:rank.team.handle|add:".png" as static_img %}
                                 <img class="team-logo" src="{% static static_img %}" alt="">

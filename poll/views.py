@@ -1,3 +1,4 @@
+from django.http import HttpResponseForbidden
 from django.shortcuts import render
 from django.utils import timezone
 
@@ -39,3 +40,35 @@ def poll_index(request):
     years = polls.order_by('-year').values_list('year', flat=True).distinct()
     print(years)
     return render(request, 'poll_index.html', {'polls': polls_dict, 'years': years})
+
+def poll_view(request, poll_id):
+    poll = Poll.objects.get(pk=poll_id)
+
+    if not poll.is_published and not request.user.is_staff:
+        return HttpResponseForbidden()
+
+    results = get_results_comparison(poll)
+
+    top25 = [r for r in results if r['rank'] <= 25]
+    others = [r for r in results if r['rank'] > 25]
+    up_movers = sorted(results, key=lambda r: r['ppv_diff'], reverse=True)[0:5]
+    down_movers = sorted(results, key=lambda r: r['ppv_diff'])[0:5]
+
+    if poll.last_week:
+        lw_results = get_result_set(poll.last_week)
+        top25_teams = [team['team'] for team in top25]
+        dropped = lw_results.filter(rank__lte=25).exclude(team__in=top25_teams)
+    else:
+        dropped = []
+
+    polls = Poll.objects.all()
+
+    return render(request, 'poll_view.html', {
+        'this_poll': poll,
+        'top25': top25,
+        'others': others,
+        'up_movers': up_movers,
+        'down_movers': down_movers,
+        'dropped': dropped,
+        'polls': polls
+    })
