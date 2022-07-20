@@ -30,3 +30,12 @@ def index(request):
         'down_movers': down_movers,
         'dropped': dropped
     })
+
+def poll_index(request):
+    polls = Poll.objects.all().order_by('-close_date')
+    polls_dict = polls.values()
+    for poll in polls_dict:
+        poll['top_team'] = get_result_set(polls.get(pk=poll['id'])).first().team
+    years = polls.order_by('-year').values_list('year', flat=True).distinct()
+    print(years)
+    return render(request, 'poll_index.html', {'polls': polls_dict, 'years': years})

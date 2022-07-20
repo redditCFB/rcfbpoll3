@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% load tz %}
+    <div class="container">
+        <h1>Poll Index</h1>
+        {% for year in years %}
+            <h3>{{ year }}</h3>
+            <table class="table table-striped" style="width: auto;">
+                <thead>
+                    <tr>
+                        <th>Week</th>
+                        <th>Published</th>
+                        <th>#1 Team</th>
+                        <th>Voters</th>
+                        <th>Ballots</th>
+                        <th>Analysis</th>
+                    <tr>
+                </thead>
+                <tbody>
+                    {% for poll in polls %}
+                        {% if poll.year == year %}
+                            <tr>
+                                <td><a href="/poll/view/{{ poll.id }}/">{{ poll.week }}</a></td>
+                                {% localtime on %}
+                                    <td>{{ poll.publish_date }}</td>
+                                {% endlocaltime %}
+                                <td>
+                                    {% with "images/full60/"|add:poll.top_team.handle|add:".png" as static_img %}
+                                    <img class="team-logo" src="{% static static_img %}" alt="">
+                                    {% endwith %}
+                                    {{ poll.top_team.short_name }}
+                                </td>
+                                <td><a href="/poll/voters/{{ poll.id }}/">Voters</a></td>
+                                <td><a href="/poll/ballots/{{ poll.id }}/">Ballots</a></td>
+                                <td><a href="/poll/analysis/{{ poll.id }}/">Analysis</a></td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endfor %}
+    </div>
+{% endblock %}

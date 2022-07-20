@@ -3,10 +3,10 @@
 {% block content %}
     <div class="container">
         <div class="row flex-lg-row align-items-center g-5 py-5">
-            <div class="col-md-4 col-xs-8">
+            <div class="col-md-4 col-xs-6">
                 <img id="main-logo" class="img-fluid" src="{% static 'images/poll.png' %}" alt="">
             </div>
-            <div class="col-md-6 col-xs-12">
+            <div class="col-md-8 col-xs-12">
                 <h1 class="display-6 fw-bold">The /r/CFB Poll</h1>
                 <p>Welcome to the /r/CFB poll, the weekly top 25 poll voted on and published by members of /r/CFB, the home of college football on Reddit.</p>
                 <p><a class="btn btn-primary btn-lg" href="/about/" role="button">About the poll &raquo;</a></p>
@@ -14,8 +14,8 @@
         </div>
     </div>
 	<div class="container">
-		<div class="row">
-			<div class="col-xs-12 col-md-6">
+		<div class="row flex-lg-row g-5 py-5">
+			<div class="col-md-12 col-lg-6 d-flex flex-column">
 				<h2>Current Top 25</h2>
 				<h3>{{ poll.year }} {{ poll.week }}</h3>
                 <table class="table table-striped" style="width: auto;" id="current-results">
@@ -65,7 +65,7 @@
                     {% endfor %}
                 </p>
 			</div>
-			<div class="col-xs-12 col-md-6">
+			<div class="col-md-12 col-lg-6 d-flex flex-column">
 				<h2>Biggest Movers</h2>
 				<h3>Moving Up</h3>
                 <table class="table table-striped" style="width: auto;">
