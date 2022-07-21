@@ -1,3 +1,5 @@
+from math import ceil
+
 from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -34,7 +36,7 @@ def index(request):
 
 
 def poll_index(request):
-    polls = Poll.objects.all().order_by('-close_date')
+    polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
     polls_dict = polls.values()
     for poll in polls_dict:
         poll['top_team'] = get_result_set(polls.get(pk=poll['id'])).first().team
@@ -86,7 +88,7 @@ def poll_view(request, poll_id):
     else:
         dropped = []
 
-    polls = Poll.objects.all().order_by('-close_date')
+    polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
 
     return render(request, 'poll_view.html', {
         'this_poll': poll,
@@ -102,12 +104,12 @@ def poll_view(request, poll_id):
 
 
 def this_week(request):
-    most_recent_poll = Poll.objects.filter(close_date__lt=timezone.now()).order_by('-close_date').first()
+    most_recent_poll = Poll.objects.filter(publish_date__lt=timezone.now()).order_by('-close_date').first()
     return redirect('/poll/view/%d/' % most_recent_poll.id)
 
 
 def last_week(request):
-    most_recent_poll = Poll.objects.filter(close_date__lt=timezone.now()).order_by('-close_date').first()
+    most_recent_poll = Poll.objects.filter(publish_date__lt=timezone.now()).order_by('-close_date').first()
     return redirect('/poll/view/%d/' % most_recent_poll.last_week.id)
 
 
@@ -115,11 +117,14 @@ def team_view(request, poll_id, team_id):
     this_poll = Poll.objects.get(pk=poll_id)
     this_team = Team.objects.get(pk=team_id)
 
+    if not this_poll.is_published and not request.user.is_staff:
+        return HttpResponseForbidden()
+
     entries = BallotEntry.objects.filter(ballot__poll=this_poll, team=this_team).order_by(
         'rank', 'ballot__user__username'
     )
 
-    polls = Poll.objects.all().order_by('-close_date')
+    polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
     teams = get_result_set(this_poll, set_options={'provisional': True}).only('team')
 
     return render(request, 'team_view.html', {
@@ -133,12 +138,44 @@ def team_view(request, poll_id, team_id):
 
 def voters_view(request, poll_id):
     this_poll = Poll.objects.get(pk=poll_id)
+
+    if not this_poll.is_published and not request.user.is_staff:
+        return HttpResponseForbidden()
+
     ballots = Ballot.objects.filter(poll=this_poll, submission_date__isnull=False).order_by('user__username')
 
-    polls = Poll.objects.all().order_by('-close_date')
+    polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
 
     return render(request, 'voters_view.html', {
         'this_poll': this_poll,
         'ballots': ballots,
         'polls': polls
+    })
+
+
+def ballots_view(request, poll_id):
+    this_poll = Poll.objects.get(pk=poll_id)
+
+    if not this_poll.is_published and not request.user.is_staff:
+        return HttpResponseForbidden()
+
+    page = int(request.GET.get('page', "1"))
+    user_type = int(request.GET.get('user_type', "1"))
+
+    ballots = Ballot.objects.filter(poll=this_poll, user_type=user_type).order_by('user__username')
+    ballot_count = ballots.count()
+    this_page_ballots = ballots[(5 * (page - 1)):min(ballot_count, 5 * page)]
+
+    ballot_entries = BallotEntry.objects.filter(ballot__in=this_page_ballots).order_by('ballot__user__username', 'rank')
+
+    polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
+
+    return render(request, 'ballots_view.html', {
+        'this_poll': this_poll,
+        'ballots': this_page_ballots,
+        'ballot_entries': ballot_entries,
+        'polls': polls,
+        'user_type': user_type,
+        'page': page,
+        'pages': range(ceil(ballot_count / 5))
     })
