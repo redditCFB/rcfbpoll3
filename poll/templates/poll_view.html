@@ -14,13 +14,13 @@
         </div>
         <h1 class="py-3">{{ this_poll }}</h1>
         <nav class="nav py-3">
-            <h4><a class="nav-link disabled" href="/poll/view/{{ poll.id }}/">Results</a></h4>
+            <h4><a class="nav-link disabled" href="/poll/view/{{ this_poll.id }}/">Results</a></h4>
             <div class="vr"></div>
-            <h4><a class="nav-link" href="/poll/voters/{{ poll.id }}/">Voters</a></h4>
+            <h4><a class="nav-link" href="/poll/voters/{{ this_poll.id }}/">Voters</a></h4>
             <div class="vr"></div>
-            <h4><a class="nav-link" href="/poll/ballots/{{ poll.id }}/">Ballots</a></h4>
+            <h4><a class="nav-link" href="/poll/ballots/{{ this_poll.id }}/">Ballots</a></h4>
             <div class="vr"></div>
-            <h4><a class="nav-link" href="/poll/analysis/{{ poll.id }}/">Analysis</a></h4>
+            <h4><a class="nav-link" href="/poll/analysis/{{ this_poll.id }}/">Analysis</a></h4>
         </nav>
         <div class="accordion py-3" id="filterAccordion">
             <div class="accordion-item">

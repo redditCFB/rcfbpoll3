@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <div class="container">
+        <div class="dropdown py-3">
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Jump to another week...
+            </button>
+            <ul class="dropdown-menu" style="overflow-y:auto; max-height:80vh; overflow-x: hidden;">
+                {% for poll in polls %}
+                    <li><a class="dropdown-item" href="/poll/voters/{{ poll.id }}/">{{ poll }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <h1 class="py-3">{{ this_poll }}</h1>
+        <nav class="nav py-3">
+            <h4><a class="nav-link" href="/poll/view/{{ this_poll.id }}/">Results</a></h4>
+            <div class="vr"></div>
+            <h4><a class="nav-link disabled" href="/poll/voters/{{ this_poll.id }}/">Voters</a></h4>
+            <div class="vr"></div>
+            <h4><a class="nav-link" href="/poll/ballots/{{ this_poll.id }}/">Ballots</a></h4>
+            <div class="vr"></div>
+            <h4><a class="nav-link" href="/poll/analysis/{{ this_poll.id }}/">Analysis</a></h4>
+        </nav>
+        <div class="py-2">
+            <h4>
+                Main Poll Voters
+            </h4>
+        </div>
+        <div class="py-2" id="main-voters">
+            {% for ballot in ballots %}
+                {% if ballot.user_type == 1 %}
+                    <a class="{% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.id }}/">
+                        {{ ballot.user.username }}
+                    </a><br>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div class="py-2">
+            <h4>
+                Provisional Poll Voters
+            </h4>
+        </div>
+        <div class="py-2" id="provisional-voters">
+            {% for ballot in ballots %}
+                {% if ballot.user_type == 2 %}
+                    <div><a class="{% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.id }}/">
+                        {{ ballot.user.username }}
+                    </a></div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div class="py-2">
+            <span class="text-primary">Blue</span> = Human<br>
+            <span class="text-danger">Red</span> = Computer<br>
+            <span class="text-success">Green</span> = Hybrid<br>
+            <br>
+            <span class="fw-bold">Bold</span> = before the AP poll was published<br>
+            <span class="fw-normal">Normal</span> = after the AP poll was published<br>
+        </div>
+    </div>
+    <script>
+        $( function() {
+            $('#main-voters').columnize({columns: 5});
+            $('#provisional-voters').columnize({columns: 5});
+        });
+    </script>
+{% endblock %}

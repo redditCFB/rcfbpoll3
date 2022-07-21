@@ -2,7 +2,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
-from .models import BallotEntry, Poll, Team
+from .models import Ballot, BallotEntry, Poll, Team
 from .utils import get_result_set, get_results_comparison
 
 
@@ -115,7 +115,9 @@ def team_view(request, poll_id, team_id):
     this_poll = Poll.objects.get(pk=poll_id)
     this_team = Team.objects.get(pk=team_id)
 
-    entries = BallotEntry.objects.filter(ballot__poll=this_poll, team=this_team).order_by('rank', 'ballot__user__username')
+    entries = BallotEntry.objects.filter(ballot__poll=this_poll, team=this_team).order_by(
+        'rank', 'ballot__user__username'
+    )
 
     polls = Poll.objects.all().order_by('-close_date')
     teams = get_result_set(this_poll, set_options={'provisional': True}).only('team')
@@ -126,4 +128,17 @@ def team_view(request, poll_id, team_id):
         'entries': entries,
         'polls': polls,
         'teams': teams
+    })
+
+
+def voters_view(request, poll_id):
+    this_poll = Poll.objects.get(pk=poll_id)
+    ballots = Ballot.objects.filter(poll=this_poll, submission_date__isnull=False).order_by('user__username')
+
+    polls = Poll.objects.all().order_by('-close_date')
+
+    return render(request, 'voters_view.html', {
+        'this_poll': this_poll,
+        'ballots': ballots,
+        'polls': polls
     })

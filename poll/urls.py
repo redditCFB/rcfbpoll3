@@ -8,5 +8,6 @@ urlpatterns = [
     path('poll/this_week/', views.this_week, name='this_week'),
     path('poll/last_week/', views.last_week, name='last_week'),
     path('poll/view/<int:poll_id>/', views.poll_view, name='poll_view'),
-    path('poll/view/<int:poll_id>/team/<int:team_id>/', views.team_view, name='team_view')
+    path('poll/view/<int:poll_id>/team/<int:team_id>/', views.team_view, name='team_view'),
+    path('poll/voters/<int:poll_id>/', views.voters_view, name='voters_view')
 ]
