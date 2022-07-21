@@ -9,10 +9,12 @@ from .models import (
 
 class RoleInline(admin.TabularInline):
     model = UserRole
+    extra = 0
 
 
 class SecondaryAffiliationInline(admin.TabularInline):
     model = UserSecondaryAffiliation
+    extra = 0
 
 
 class UserAdmin(admin.ModelAdmin):
@@ -63,6 +65,7 @@ admin.site.register(Team, TeamAdmin)
 class ResultSetInline(admin.TabularInline):
     model = ResultSet
     show_change_link = True
+    extra = 0
 
 
 class BallotInLine(admin.TabularInline):
@@ -70,6 +73,7 @@ class BallotInLine(admin.TabularInline):
     show_change_link = True
     readonly_fields = ('is_submitted',)
     fields = ('user', 'poll_type', 'is_submitted')
+    extra = 0
 
 
 class PollAdmin(admin.ModelAdmin):
@@ -83,6 +87,7 @@ admin.site.register(Poll, PollAdmin)
 
 class BallotEntryInline(admin.TabularInline):
     model = BallotEntry
+    extra = 0
 
 
 class BallotAdmin(admin.ModelAdmin):
@@ -98,6 +103,7 @@ admin.site.register(Ballot, BallotAdmin)
 
 class ResultInLine(admin.TabularInline):
     model = Result
+    extra = 0
 
 
 class ResultSetAdmin(admin.ModelAdmin):

@@ -1,8 +1,8 @@
 from django.http import HttpResponseForbidden
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.utils import timezone
 
-from .models import Poll
+from .models import BallotEntry, Poll, Team
 from .utils import get_result_set, get_results_comparison
 
 
@@ -32,6 +32,7 @@ def index(request):
         'dropped': dropped
     })
 
+
 def poll_index(request):
     polls = Poll.objects.all().order_by('-close_date')
     polls_dict = polls.values()
@@ -41,13 +42,37 @@ def poll_index(request):
     print(years)
     return render(request, 'poll_index.html', {'polls': polls_dict, 'years': years})
 
+
 def poll_view(request, poll_id):
     poll = Poll.objects.get(pk=poll_id)
 
     if not poll.is_published and not request.user.is_staff:
         return HttpResponseForbidden()
 
-    results = get_results_comparison(poll)
+    if len(request.GET) == 0:
+        options = {
+            'human': True,
+            'computer': True,
+            'hybrid': True,
+            'main': True,
+            'provisional': False,
+            'before_ap': True,
+            'after_ap': True
+        }
+        show_filters = False
+    else:
+        options = {
+            'human': request.GET.get('human', None) is not None,
+            'computer': request.GET.get('computer', None) is not None,
+            'hybrid': request.GET.get('hybrid', None) is not None,
+            'main': request.GET.get('main', None) is not None,
+            'provisional': request.GET.get('provisional', None) is not None,
+            'before_ap': request.GET.get('before_ap', None) is not None,
+            'after_ap': request.GET.get('after_ap', None) is not None
+        }
+        show_filters = True
+
+    results = get_results_comparison(poll, options)
 
     top25 = [r for r in results if r['rank'] <= 25]
     others = [r for r in results if r['rank'] > 25]
@@ -61,14 +86,44 @@ def poll_view(request, poll_id):
     else:
         dropped = []
 
-    polls = Poll.objects.all()
+    polls = Poll.objects.all().order_by('-close_date')
 
     return render(request, 'poll_view.html', {
         'this_poll': poll,
+        'options': options,
         'top25': top25,
         'others': others,
         'up_movers': up_movers,
         'down_movers': down_movers,
         'dropped': dropped,
-        'polls': polls
+        'polls': polls,
+        'show_filters': show_filters
+    })
+
+
+def this_week(request):
+    most_recent_poll = Poll.objects.filter(close_date__lt=timezone.now()).order_by('-close_date').first()
+    return redirect('/poll/view/%d/' % most_recent_poll.id)
+
+
+def last_week(request):
+    most_recent_poll = Poll.objects.filter(close_date__lt=timezone.now()).order_by('-close_date').first()
+    return redirect('/poll/view/%d/' % most_recent_poll.last_week.id)
+
+
+def team_view(request, poll_id, team_id):
+    this_poll = Poll.objects.get(pk=poll_id)
+    this_team = Team.objects.get(pk=team_id)
+
+    entries = BallotEntry.objects.filter(ballot__poll=this_poll, team=this_team).order_by('rank', 'ballot__user__username')
+
+    polls = Poll.objects.all().order_by('-close_date')
+    teams = get_result_set(this_poll, set_options={'provisional': True}).only('team')
+
+    return render(request, 'team_view.html', {
+        'this_poll': this_poll,
+        'this_team': this_team,
+        'entries': entries,
+        'polls': polls,
+        'teams': teams
     })

@@ -212,9 +212,9 @@ class ResultSet(models.Model):
         ballots = Ballot.objects.filter(poll=self.poll, poll_type__in=types, submission_date__isnull=False)
 
         if not self.before_ap:
-            ballots = ballots.filter(submission_date__lte=self.poll.ap_date)
+            ballots = ballots.exclude(submission_date__lte=self.poll.ap_date)
         if not self.after_ap:
-            ballots = ballots.filter(submission_date__gt=self.poll.ap_date)
+            ballots = ballots.exclude(submission_date__gt=self.poll.ap_date)
 
         if not self.main:
             ballots = ballots.exclude(user_type=UserRole.Role.VOTER)

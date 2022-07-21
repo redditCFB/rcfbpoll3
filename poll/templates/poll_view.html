@@ -1,8 +1,183 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-{% load tz %}
     <div class="container">
-
+        <div class="dropdown py-3">
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Jump to another week...
+            </button>
+            <ul class="dropdown-menu" style="overflow-y:auto; max-height:80vh; overflow-x: hidden;">
+                {% for poll in polls %}
+                    <li><a class="dropdown-item" href="/poll/view/{{ poll.id }}/">{{ poll }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <h1 class="py-3">{{ this_poll }}</h1>
+        <nav class="nav py-3">
+            <h4><a class="nav-link disabled" href="/poll/view/{{ poll.id }}/">Results</a></h4>
+            <div class="vr"></div>
+            <h4><a class="nav-link" href="/poll/voters/{{ poll.id }}/">Voters</a></h4>
+            <div class="vr"></div>
+            <h4><a class="nav-link" href="/poll/ballots/{{ poll.id }}/">Ballots</a></h4>
+            <div class="vr"></div>
+            <h4><a class="nav-link" href="/poll/analysis/{{ poll.id }}/">Analysis</a></h4>
+        </nav>
+        <div class="accordion py-3" id="filterAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button{% if not show_filters %} collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        <h5>Filters</h5>
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse{% if show_filters %} show{% endif %}" aria-labelledby="headingOne">
+                    <div class="accordion-body">
+                        <form action="" method="get">
+                            <div class="py-2 row">
+                                <div class="form-label col-auto">Voter Type:</div>
+                                <div class="col-auto">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="mainCheckbox" name="main" {% if options.main %} checked {% endif %}>
+                                        <label class="form-check-label" for="mainCheckbox">Voter</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="provisionalCheckbox" name="provisional" {% if options.provisional %} checked {% endif %}>
+                                        <label class="form-check-label" for="provisionalCheckbox">Provisional</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="py-2 row">
+                                <div class="form-label col-auto">Ballot Type:</div>
+                                <div class="col-auto">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="humanCheckbox" name="human" {% if options.human %} checked {% endif %}>
+                                        <label class="form-check-label" for="humanCheckbox">Human</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="computerCheckbox" name="computer" {% if options.computer %} checked {% endif %}>
+                                        <label class="form-check-label" for="computerCheckbox">Computer</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="hybridCheckbox" name="hybrid" {% if options.hybrid %} checked {% endif %}>
+                                        <label class="form-check-label" for="hybridCheckbox">Hybrid</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="py-2 row">
+                                <div class="form-label col-auto">Timing:</div>
+                                <div class="col-auto">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="beforeCheckbox" name="before_ap" {% if options.before_ap %} checked {% endif %}>
+                                        <label class="form-check-label" for="beforeCheckbox">Before the AP</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" id="afterCheckbox" name="after_ap" {% if options.after_ap %} checked {% endif %}>
+                                        <label class="form-check-label" for="afterCheckbox">After the AP</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="py-2">
+                                <button type="submit" class="btn btn-primary">Update</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive py-3">
+            <table class="table table-sm table-striped table-bordered" id="poll-results">
+                <tr>
+                    <th class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Plus Difference From Baseline (If Applicable)">
+                        Rank
+                        <span class="badge text-bg-secondary">?</span>
+                    </th>
+                    <th class="text-center">Change</th>
+                    <th>Team (#1 Votes)</th>
+                    <th class="text-center">Points</th>
+                    <th class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Average Points Assigned By Each Voter">
+                        PPV
+                        <span class="badge text-bg-secondary">?</span>
+                    </th>
+                    <th class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Change In PPV Since Last Week">
+                        Δ PPV
+                        <span class="badge text-bg-secondary">?</span>
+                    </th>
+                    <th class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Standard Deviation - A Measure Of How Much Voters Disagree">
+                        σ
+                        <span class="badge text-bg-secondary">?</span>
+                    </th>
+                    <th class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Number Of Ballots Cast With The Team">
+                        # Votes
+                        <span class="badge text-bg-secondary">?</span>
+                    </th>
+                </tr>
+                {% for rank in top25 %}
+                    <tr>
+                        <td class="text-center" id="team-rank">
+                            {{ rank.rank }}
+                            {% if rank.baseline_diff > 0 %}
+                                (<span class="text-success">{{ rank.baseline_diff_str }}</span>)
+                            {% elif rank.baseline_diff < 0 %}
+                                (<span class="text-danger">{{ rank.baseline_diff_str }}</span>)
+                            {% endif %}
+                        </td>
+                        {% if rank.rank_diff_str == 'NEW' %}
+                            <td class="text-center"><strong>NEW</strong></td>
+                        {% elif rank.rank_diff > 0 %}
+                            <td class="text-center text-success">{{ rank.rank_diff_str }}</td>
+                        {% elif rank.rank_diff < 0 %}
+                            <td class="text-center text-danger">{{ rank.rank_diff_str }}</td>
+                        {% else %}
+                            <td class="text-center">--</td>
+                        {% endif %}
+                        <td id="team-name">
+                            {% with "images/full60/"|add:rank.team.handle|add:".png" as static_img %}
+                            <img class="team-logo" src="{% static static_img %}" alt="">
+                            {% endwith %}
+                            <a href="/poll/view/{{ this_poll.id }}/team/{{ rank.team.id }}/">
+                                {{ rank.team.name }}
+                            </a>
+                            {% if rank.first_place_votes > 0 %}
+                                ({{ rank.first_place_votes }})
+                            {% endif %}
+                        </td>
+                        <td class="text-center" id="team-points">{{ rank.points }}</td>
+                        <td class="text-center">{{ rank.points_per_voter|floatformat:2 }}</td>
+                        {% if rank.ppv_diff > 0 %}
+                            <td class="text-center text-success">+{{ rank.ppv_diff|floatformat:2 }}</td>
+                        {% elif rank.ppv_diff < 0 %}
+                            <td class="text-center text-danger">{{ rank.ppv_diff|floatformat:2 }}</td>
+                        {% else %}
+                            <td class="text-center">±{{ rank.ppv_diff|floatformat:2 }}</td>
+                        {% endif %}
+                        <td class="text-center">{{ rank.std_dev|floatformat:2 }}</td>
+                        <td class="text-center">{{ rank.votes }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+            {% if dropped and dropped.count > 0 %}
+                <p>
+                    <strong>Dropped:</strong>
+                    {% for rank in dropped %}
+                        #{{ rank.rank }}
+                        <a href="/poll/view/{{ this_poll.id }}/team/{{ rank.team.id }}/">
+                            {{ rank.team.short_name }}
+                        </a>{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                </p>
+            {% endif %}
+            <p>
+                <strong>Others Receiving Votes:</strong>
+                {% for rank in others %}
+                    <a href="/poll/view/{{ this_poll.id }}/team/{{ rank.team.id }}/">
+                        {{ rank.team.short_name }}
+                    </a>
+                    {{ rank.points }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            </p>
+        </div>
     </div>
+    <script>
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    </script>
 {% endblock %}

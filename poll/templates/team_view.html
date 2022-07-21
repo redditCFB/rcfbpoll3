@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <div class="container">
+        <div class="py-3">
+            <h3>
+                <a href="/poll/view/{{ this_poll.id }}/">Back to results >></a>
+            </h3>
+        </div>
+        <div class="dropdown py-3">
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Jump to another week...
+            </button>
+            <ul class="dropdown-menu" style="overflow-y:auto; max-height:60vh; overflow-x: hidden;">
+                {% for poll in polls %}
+                    <li><a class="dropdown-item" href="/poll/view/{{ poll.id }}/team/{{ this_team.id }}/">{{ poll }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="dropdown py-3">
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Jump to another team...
+            </button>
+            <ul class="dropdown-menu" style="overflow-y:auto; max-height:60vh; overflow-x: hidden;">
+                {% for team in teams %}
+                    <li><a class="dropdown-item" href="/poll/view/{{ this_poll.id }}/team/{{ team.team.id }}/">
+                        {% with "images/full60/"|add:team.team.handle|add:".png" as static_img %}
+                            <img class="team-logo" src="{% static static_img %}" alt="">
+                        {% endwith %}
+                        {{ team.team.name}}
+                    </a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="py-2">
+            <h3>
+                {{ this_poll.year }}
+                {{ this_poll.week }}
+                {% with "images/full60/"|add:this_team.handle|add:".png" as static_img %}
+                    <img class="team-logo" src="{% static static_img %}" alt="">
+                {% endwith %}
+                {{ this_team.name }}
+                Rankings
+            </h3>
+        </div>
+        <div class="py-2">
+            <h4>
+                Main Poll Voters
+            </h4>
+        </div>
+        <div class="py-2">
+            <table class="table table-striped">
+                <tr>
+                    <th>User</th>
+                    <th>Rank</th>
+                    <th>Reason</th>
+                </tr>
+                {% for entry in entries %}
+                    {% if entry.ballot.user_type == 1 %}
+                        <tr>
+                            <td>
+                                <a class="{% if entry.ballot.poll_type == 1 %}text-primary{% elif entry.ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if entry.ballot.submission_date < entry.ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ entry.ballot.id }}/">
+                                    {{ entry.ballot.user.username }}
+                                </a>
+                            </td>
+                            <td class="text-center">{{ entry.rank }}</td>
+                            <td>{{ entry.rationale }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+        </div>
+        <div class="py-2">
+            <h4>
+                Provisional Poll Voters
+            </h4>
+        </div>
+        <div class="py-2">
+            <table class="table table-striped">
+                <tr>
+                    <th>User</th>
+                    <th>Rank</th>
+                    <th>Reason</th>
+                </tr>
+                {% for entry in entries %}
+                    {% if entry.ballot.user_type == 2 %}
+                        <tr>
+                            <td>
+                                <a class="{% if entry.ballot.poll_type == 1 %}text-primary{% elif entry.ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if entry.ballot.submission_date < entry.ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ entry.ballot.id }}/">
+                                    {{ entry.ballot.user.username }}
+                                </a>
+                            </td>
+                            <td class="text-center">{{ entry.rank }}</td>
+                            <td>{{ entry.rationale }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+        </div>
+        <div class="py-2">
+            <span class="text-primary">Blue</span> = Human<br>
+            <span class="text-danger">Red</span> = Computer<br>
+            <span class="text-success">Green</span> = Hybrid<br>
+            <br>
+            <span class="fw-bold">Bold</span> = before the AP poll was published<br>
+            <span class="fw-normal">Normal</span> = after the AP poll was published<br>
+        </div>
+        <div class="py-3">
+            <h3>
+                <a href="/poll/view/{{ this_poll.id }}/">Back to results >></a>
+            </h3>
+        </div>
+    </div>
+{% endblock %}
