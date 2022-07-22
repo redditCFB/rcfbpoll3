@@ -7,7 +7,18 @@
                 <a href="/poll/view/{{ this_poll.id }}/">Back to results >></a>
             </h3>
         </div>
-        <div class="dropdown py-3">
+        <div class="py-2">
+            <h3>
+                {{ this_poll.year }}
+                {{ this_poll.week }}
+                {% with "images/full60/"|add:this_team.handle|add:".png" as static_img %}
+                    <img class="team-logo" src="{% static static_img %}" alt="">
+                {% endwith %}
+                {{ this_team.name }}
+                Rankings
+            </h3>
+        </div>
+        <div class="dropdown py-2">
             <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Jump to another week...
             </button>
@@ -17,7 +28,7 @@
                 {% endfor %}
             </ul>
         </div>
-        <div class="dropdown py-3">
+        <div class="dropdown py-2">
             <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Jump to another team...
             </button>
@@ -31,17 +42,6 @@
                     </a></li>
                 {% endfor %}
             </ul>
-        </div>
-        <div class="py-2">
-            <h3>
-                {{ this_poll.year }}
-                {{ this_poll.week }}
-                {% with "images/full60/"|add:this_team.handle|add:".png" as static_img %}
-                    <img class="team-logo" src="{% static static_img %}" alt="">
-                {% endwith %}
-                {{ this_team.name }}
-                Rankings
-            </h3>
         </div>
         <div class="py-2">
             <h4>

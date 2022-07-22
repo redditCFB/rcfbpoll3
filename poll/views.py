@@ -41,7 +41,6 @@ def poll_index(request):
     for poll in polls_dict:
         poll['top_team'] = get_result_set(polls.get(pk=poll['id'])).first().team
     years = polls.order_by('-year').values_list('year', flat=True).distinct()
-    print(years)
     return render(request, 'poll_index.html', {'polls': polls_dict, 'years': years})
 
 
@@ -120,9 +119,9 @@ def team_view(request, poll_id, team_id):
     if not this_poll.is_published and not request.user.is_staff:
         return HttpResponseForbidden()
 
-    entries = BallotEntry.objects.filter(ballot__poll=this_poll, team=this_team).order_by(
-        'rank', 'ballot__user__username'
-    )
+    entries = BallotEntry.objects.filter(
+        ballot__poll=this_poll, team=this_team, ballot__submission_date__isnull=False
+    ).order_by('rank', 'ballot__user__username')
 
     polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
     teams = get_result_set(this_poll, set_options={'provisional': True}).only('team')
@@ -153,29 +152,34 @@ def voters_view(request, poll_id):
     })
 
 
-def ballots_view(request, poll_id):
+def ballots_view(request, poll_id, user_type):
     this_poll = Poll.objects.get(pk=poll_id)
 
     if not this_poll.is_published and not request.user.is_staff:
         return HttpResponseForbidden()
 
     page = int(request.GET.get('page', "1"))
-    user_type = int(request.GET.get('user_type', "1"))
 
-    ballots = Ballot.objects.filter(poll=this_poll, user_type=user_type).order_by('user__username')
+    ballots = Ballot.objects.filter(
+        poll=this_poll, user_type=user_type, submission_date__isnull=False
+    ).order_by('user__username')
     ballot_count = ballots.count()
     this_page_ballots = ballots[(5 * (page - 1)):min(ballot_count, 5 * page)]
 
-    ballot_entries = BallotEntry.objects.filter(ballot__in=this_page_ballots).order_by('ballot__user__username', 'rank')
+    ballot_entries = BallotEntry.objects.filter(ballot__in=this_page_ballots).order_by('ballot__user__username')
+    ballot_entries_pivot = {}
+    for rank in range(1, 26):
+        ballot_entries_pivot[rank] = ballot_entries.filter(rank=rank)
 
     polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
 
     return render(request, 'ballots_view.html', {
         'this_poll': this_poll,
         'ballots': this_page_ballots,
-        'ballot_entries': ballot_entries,
+        'ballot_entries': ballot_entries_pivot,
         'polls': polls,
         'user_type': user_type,
-        'page': page,
-        'pages': range(ceil(ballot_count / 5))
+        'previous_page': page - 1 if page > 1 else None,
+        'next_page': page + 1 if page < ceil(ballot_count / 5) else None,
+        'pages': range(1, ceil(ballot_count / 5) + 1)
     })

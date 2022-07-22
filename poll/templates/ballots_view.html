@@ -2,7 +2,8 @@
 {% load static %}
 {% block content %}
     <div class="container">
-        <div class="dropdown py-3">
+        <h1 class="py-3">{{ this_poll }}</h1>
+        <div class="dropdown py-2">
             <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Jump to another week...
             </button>
@@ -12,18 +13,72 @@
                 {% endfor %}
             </ul>
         </div>
-        <h1 class="py-3">{{ this_poll }}</h1>
         <nav class="nav py-3">
             <h4><a class="nav-link" href="/poll/view/{{ this_poll.id }}/">Results</a></h4>
             <div class="vr"></div>
             <h4><a class="nav-link" href="/poll/voters/{{ this_poll.id }}/">Voters</a></h4>
             <div class="vr"></div>
-            <h4><a class="nav-link disabled" href="/poll/ballots/{{ this_poll.id }}/">Ballots</a></h4>
+            <h4><a class="nav-link disabled" href="/poll/ballots/{{ this_poll.id }}/1/">Ballots</a></h4>
             <div class="vr"></div>
             <h4><a class="nav-link" href="/poll/analysis/{{ this_poll.id }}/">Analysis</a></h4>
         </nav>
-
+        <div>
+            {% if user_type == 1 %}
+                <h4>Main Voter Ballots</h4>
+                <a class="btn btn-secondary" role="button" href="/poll/ballots/{{ this_poll.id }}/2/">Show Provisional Ballots</a>
+            {% else %}
+                <h4>Provisional Voter Ballots</h4>
+                <a class="btn btn-secondary" role="button" href="/poll/ballots/{{ this_poll.id }}/1/">Show Main Ballots</a>
+            {% endif %}
+        </div>
         <div class="py-2">
+            <table class="table table-sm table-striped">
+                <tr>
+                    <th>User</th>
+                    {% for ballot in ballots %}
+                        <td class="text-center">
+                            <a class="{% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.id }}/">
+                                {{ ballot.user.username }}
+                            </a>
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% for rank, entries in ballot_entries.items %}
+                    <tr>
+                        <th>#{{ rank }}</th>
+                        {% for entry in entries %}
+                            <td>
+                                {% with "images/full60/"|add:entry.team.handle|add:".png" as static_img %}
+                                    <img class="team-logo" src="{% static static_img %}" alt="">
+                                {% endwith %}
+                                <a href="/poll/view/{{ this_poll.id }}/team/{{ entry.team.id }}/">
+                                    {{ entry.team.short_name }}
+                                </a>
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <div class="nav py-2">
+            {% if previous_page %}
+                <a class="btn btn-primary mx-2" role="button" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/?page={{ previous_page }}">Previous</a>
+            {% endif %}
+            {% if next_page %}
+                <a class="btn btn-primary mx-2" role="button" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/?page={{ next_page }}">Next</a>
+            {% endif %}
+            <div class="dropdown mx-4">
+                <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Go to page...
+                </button>
+                <ul class="dropdown-menu" style="overflow-y:auto; max-height:80vh; overflow-x: hidden;">
+                    {% for page in pages %}
+                        <li><a class="dropdown-item" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/?page={{ page }}">{{ page }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="py-3">
             <span class="text-primary">Blue</span> = Human<br>
             <span class="text-danger">Red</span> = Computer<br>
             <span class="text-success">Green</span> = Hybrid<br>

@@ -2,7 +2,8 @@
 {% load static %}
 {% block content %}
     <div class="container">
-        <div class="dropdown py-3">
+        <h1 class="py-3">{{ this_poll }}</h1>
+        <div class="dropdown py-2">
             <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Jump to another week...
             </button>
@@ -12,13 +13,12 @@
                 {% endfor %}
             </ul>
         </div>
-        <h1 class="py-3">{{ this_poll }}</h1>
         <nav class="nav py-3">
             <h4><a class="nav-link" href="/poll/view/{{ this_poll.id }}/">Results</a></h4>
             <div class="vr"></div>
             <h4><a class="nav-link disabled" href="/poll/voters/{{ this_poll.id }}/">Voters</a></h4>
             <div class="vr"></div>
-            <h4><a class="nav-link" href="/poll/ballots/{{ this_poll.id }}/">Ballots</a></h4>
+            <h4><a class="nav-link" href="/poll/ballots/{{ this_poll.id }}/1/">Ballots</a></h4>
             <div class="vr"></div>
             <h4><a class="nav-link" href="/poll/analysis/{{ this_poll.id }}/">Analysis</a></h4>
         </nav>
