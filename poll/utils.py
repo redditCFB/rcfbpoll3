@@ -3,6 +3,8 @@ import pytz
 
 from .models import ResultSet
 
+MIN_OUTLIER_FACTOR = 1
+
 
 def get_result_set(poll, set_options=None):
     options = {
@@ -103,3 +105,33 @@ def get_results_comparison(poll, set_options=None):
             this_comparison['baseline_diff_str'] = ''
         results.append(this_comparison)
     return results
+
+
+def get_outlier_analysis(ballot, results):
+    ballot_entries = ballot.get_entries()
+
+    total_score = 0
+    ranks = []
+    teams_ranked = []
+    for entry in ballot_entries:
+        result = results.get(team=entry.team)
+        score = max(0, (abs(26 - entry.rank - result.points_per_voter) / max(MIN_OUTLIER_FACTOR, result.std_dev)) - 0.5)
+        ranks.append((entry.team, score))
+        total_score += score
+        teams_ranked.append(entry.team)
+
+    omissions = []
+    for rank in range(1, 26):
+        result = results.get(rank=rank)
+        if result.team not in teams_ranked:
+            score = max(0, (result.points_per_voter / max(MIN_OUTLIER_FACTOR, result.std_dev)) - 0.5)
+            if score > 0:
+                omissions.append((result.team, score))
+                total_score += score
+
+    return {
+        'ballot': ballot,
+        'ranks': ranks,
+        'omissions': omissions,
+        'score': total_score
+    }

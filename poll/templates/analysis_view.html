@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <div class="container">
+        <h1 class="py-3">{{ this_poll }}</h1>
+        <div class="dropdown py-2">
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Jump to another week...
+            </button>
+            <ul class="dropdown-menu" style="overflow-y:auto; max-height:80vh; overflow-x: hidden;">
+                {% for poll in polls %}
+                    <li><a class="dropdown-item" href="/poll/analysis/{{ poll.id }}/">{{ poll }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <nav class="nav py-3">
+            <h4><a class="nav-link" href="/poll/view/{{ this_poll.id }}/">Results</a></h4>
+            <div class="vr"></div>
+            <h4><a class="nav-link" href="/poll/voters/{{ this_poll.id }}/">Voters</a></h4>
+            <div class="vr"></div>
+            <h4><a class="nav-link" href="/poll/ballots/{{ this_poll.id }}/1/">Ballots</a></h4>
+            <div class="vr"></div>
+            <h4><a class="nav-link disabled" href="/poll/analysis/{{ this_poll.id }}/">Analysis</a></h4>
+        </nav>
+        <div>
+            {% if not include_provisional %}
+                <a class="btn btn-secondary" role="button" href="/poll/analysis/{{ this_poll.id }}/?include_provisional=True">Show Provisional Ballots</a>
+            {% else %}
+                <a class="btn btn-secondary" role="button" href="/poll/analysis/{{ this_poll.id }}/">Hide Provisional Ballots</a>
+            {% endif %}
+        </div>
+        <div class="row flex-lg-row g-5 py-3">
+			<div class="col-md-12 col-lg-4 d-lg-flex flex-column">
+				<h4 class="text-center py-2">Least Agreed Upon Teams</h4>
+                <table class="table table-striped">
+                    <tr>
+                        <th>Team</th>
+                        <th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Standard Deviation - A Measure Of How Much Voters Disagree">
+                            σ
+                            <span class="badge text-bg-secondary">?</span>
+                        </th>
+                    </tr>
+                    {% for result in most_disagreed %}
+                        <tr>
+                            <td id="team-name">
+                                {% with "images/full60/"|add:result.team.handle|add:".png" as static_img %}
+                                <img class="team-logo" src="{% static static_img %}" alt="">
+                                {% endwith %}
+                                {{ result.team.short_name }}
+                            </td>
+                            <td>{{ result.std_dev|floatformat:2 }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+			</div>
+            <div class="col-md-12 col-lg-4 d-lg-flex flex-column">
+				<h4 class="text-center py-2">Most Unusual Ballots</h4>
+                <table class="table table-striped">
+                    <tr>
+                        <th>User</th>
+                        <th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumulative weirdness of each ranking and omission">
+                            Score
+                            <span class="badge text-bg-secondary">?</span>
+                        </th>
+                    </tr>
+                    {% for ballot in most_unusual %}
+                        <tr>
+                            <td>
+                                <a class="{% if ballot.ballot.poll_type == 1 %}text-primary{% elif ballot.ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.ballot.submission_date < ballot.ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.ballot.id }}/">
+                                    {{ ballot.ballot.user }}
+                                </a>
+                            </td>
+                            <td>{{ ballot.score|floatformat:2 }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+			</div>
+            <div class="col-md-12 col-lg-4 d-lg-flex flex-column">
+				<h4 class="text-center py-2">Least Unusual Ballots</h4>
+                <table class="table table-striped">
+                    <tr>
+                        <th>User</th>
+                        <th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumulative weirdness of each ranking and omission">
+                            Score
+                            <span class="badge text-bg-secondary">?</span>
+                        </th>
+                    </tr>
+                    {% for ballot in least_unusual %}
+                        <tr>
+                            <td>
+                                <a class="{% if ballot.ballot.poll_type == 1 %}text-primary{% elif ballot.ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.ballot.submission_date < ballot.ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.ballot.id }}/">
+                                    {{ ballot.ballot.user }}
+                                </a>
+                            </td>
+                            <td>{{ ballot.score|floatformat:2 }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+			</div>
+        </div>
+        <div class="py-3">
+            <span class="text-primary">Blue</span> = Human<br>
+            <span class="text-danger">Red</span> = Computer<br>
+            <span class="text-success">Green</span> = Hybrid<br>
+            <br>
+            <span class="fw-bold">Bold</span> = before the AP poll was published<br>
+            <span class="fw-normal">Normal</span> = after the AP poll was published<br>
+        </div>
+    </div>
+    <script>
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    </script>
+{% endblock %}

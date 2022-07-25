@@ -128,6 +128,9 @@ class Ballot(models.Model):
     def __str__(self):
         return '%s %s' % (self.poll, self.user)
 
+    def get_entries(self):
+        return BallotEntry.objects.filter(ballot=self).order_by('rank')
+
 
 class BallotEntry(models.Model):
     ballot = models.ForeignKey('Ballot', on_delete=models.CASCADE)

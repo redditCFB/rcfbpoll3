@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 
 from .models import Ballot, BallotEntry, Poll, Team
-from .utils import get_result_set, get_results_comparison
+from .utils import get_outlier_analysis, get_result_set, get_results_comparison
 
 
 def index(request):
@@ -183,3 +183,44 @@ def ballots_view(request, poll_id, user_type):
         'next_page': page + 1 if page < ceil(ballot_count / 5) else None,
         'pages': range(1, ceil(ballot_count / 5) + 1)
     })
+
+
+def analysis_view(request, poll_id):
+    this_poll = Poll.objects.get(pk=poll_id)
+
+    if not this_poll.is_published and not request.user.is_staff:
+        return HttpResponseForbidden()
+
+    include_provisional = request.GET.get('include_provisional', False)
+
+    results = get_result_set(this_poll, {'provisional': include_provisional})
+
+    ballots = Ballot.objects.filter(poll=this_poll, submission_date__isnull=False).order_by('user__username')
+    if not include_provisional:
+        ballots = ballots.filter(user_type=1)
+
+    ballot_analysis = []
+    for ballot in ballots:
+        ballot_analysis.append(get_outlier_analysis(ballot, results))
+
+    polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
+
+    most_unusual = sorted(ballot_analysis, key=lambda a: a['score'], reverse=True)[0:20]
+    least_unusual = sorted(ballot_analysis, key=lambda a: a['score'])[0:20]
+
+    most_disagreed = results.order_by('-std_dev')[0:10]
+
+    return render(request, 'analysis_view.html', {
+        'this_poll': this_poll,
+        'include_provisional': include_provisional,
+        'analysis': ballot_analysis,
+        'most_unusual': most_unusual,
+        'least_unusual': least_unusual,
+        'most_disagreed': most_disagreed,
+        'polls': polls
+    })
+
+
+def analysis_this_week(request):
+    most_recent_poll = Poll.objects.filter(publish_date__lt=timezone.now()).order_by('-close_date').first()
+    return redirect('/poll/analysis/%d/' % most_recent_poll.id)
