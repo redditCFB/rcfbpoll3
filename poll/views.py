@@ -1,5 +1,6 @@
 from math import ceil
 
+from django.db.models.functions import Lower
 from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -121,7 +122,7 @@ def team_view(request, poll_id, team_id):
 
     entries = BallotEntry.objects.filter(
         ballot__poll=this_poll, team=this_team, ballot__submission_date__isnull=False
-    ).order_by('rank', 'ballot__user__username')
+    ).order_by('rank', Lower('ballot__user__username'))
 
     polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
     teams = get_result_set(this_poll, set_options={'provisional': True}).only('team')
@@ -141,7 +142,7 @@ def voters_view(request, poll_id):
     if not this_poll.is_published and not request.user.is_staff:
         return HttpResponseForbidden()
 
-    ballots = Ballot.objects.filter(poll=this_poll, submission_date__isnull=False).order_by('user__username')
+    ballots = Ballot.objects.filter(poll=this_poll, submission_date__isnull=False).order_by(Lower('user__username'))
 
     polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
 
@@ -162,11 +163,11 @@ def ballots_view(request, poll_id, user_type):
 
     ballots = Ballot.objects.filter(
         poll=this_poll, user_type=user_type, submission_date__isnull=False
-    ).order_by('user__username')
+    ).order_by(Lower('user__username'))
     ballot_count = ballots.count()
     this_page_ballots = ballots[(5 * (page - 1)):min(ballot_count, 5 * page)]
 
-    ballot_entries = BallotEntry.objects.filter(ballot__in=this_page_ballots).order_by('ballot__user__username')
+    ballot_entries = BallotEntry.objects.filter(ballot__in=this_page_ballots).order_by(Lower('ballot__user__username'))
     ballot_entries_pivot = {}
     for rank in range(1, 26):
         ballot_entries_pivot[rank] = ballot_entries.filter(rank=rank)
@@ -195,7 +196,7 @@ def analysis_view(request, poll_id):
 
     results = get_result_set(this_poll, {'provisional': include_provisional})
 
-    ballots = Ballot.objects.filter(poll=this_poll, submission_date__isnull=False).order_by('user__username')
+    ballots = Ballot.objects.filter(poll=this_poll, submission_date__isnull=False).order_by(Lower('user__username'))
     if not include_provisional:
         ballots = ballots.filter(user_type=1)
 
