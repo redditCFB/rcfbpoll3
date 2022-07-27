@@ -4,6 +4,7 @@ import pytz
 from .models import ResultSet
 
 MIN_OUTLIER_FACTOR = 1
+SCORE_OFFSET = 0.75
 
 
 def get_result_set(poll, set_options=None):
@@ -115,9 +116,13 @@ def get_outlier_analysis(ballot, results):
     teams_ranked = []
     for entry in ballot_entries:
         result = results.get(team=entry.team)
-        score = max(0, (abs(26 - entry.rank - result.points_per_voter) / max(MIN_OUTLIER_FACTOR, result.std_dev)) - 0.5)
-        ranks.append((entry.team, score))
-        total_score += score
+        score = (26 - entry.rank - result.points_per_voter) / max(MIN_OUTLIER_FACTOR, result.std_dev)
+        if score > 0:
+            score = max(0, score - SCORE_OFFSET)
+        else:
+            score = min(0, score + SCORE_OFFSET)
+        ranks.append((entry.rank, entry.team, score))
+        total_score += abs(score)
         teams_ranked.append(entry.team)
 
     omissions = []

@@ -225,3 +225,21 @@ def analysis_view(request, poll_id):
 def analysis_this_week(request):
     most_recent_poll = Poll.objects.filter(publish_date__lt=timezone.now()).order_by('-close_date').first()
     return redirect('/poll/analysis/%d/' % most_recent_poll.id)
+
+
+def ballot_view(request, ballot_id):
+    ballot = Ballot.objects.get(pk=ballot_id)
+
+    if not ballot.poll.is_published and not request.user.is_staff and not ballot.user.username == request.user.username:
+        return HttpResponseForbidden()
+
+    entries = BallotEntry.objects.filter(ballot=ballot).order_by('rank')
+
+    poll_results = get_result_set(ballot.poll)
+    ballot_analysis = get_outlier_analysis(ballot, poll_results)
+
+    return render(request, 'ballot_view.html', {
+        'ballot': ballot,
+        'entries': entries,
+        'ballot_analysis': ballot_analysis
+    })
