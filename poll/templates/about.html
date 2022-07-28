@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load markdown_extras %}
+{% block content %}
+    <div class="container">
+        <div class="row align-items-start py-3">
+            <div class="nav col-2 nav-pills me-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                <button class="nav-link {% if page == 'about' %}active{% endif %}" id="v-pills-about-tab" data-bs-toggle="pill" data-bs-target="#v-pills-about" type="button" role="tab" aria-controls="v-pills-about" aria-selected={% if page == 'about' %}"true"{% else%}"false"{% endif %}>About The Poll</button>
+                <button class="nav-link {% if page == 'process' %}active{% endif %}" id="v-pills-process-tab" data-bs-toggle="pill" data-bs-target="#v-pills-process" type="button" role="tab" aria-controls="v-pills-process" aria-selected={% if page == 'process' %}"true"{% else%}"false"{% endif %}>Process</button>
+                <button class="nav-link {% if page == 'voters' %}active{% endif %}" id="v-pills-voters-tab" data-bs-toggle="pill" data-bs-target="#v-pills-voters" type="button" role="tab" aria-controls="v-pills-voters" aria-selected={% if page == 'voters' %}"true"{% else%}"false"{% endif %}>Voter Hall Of Fame</button>
+            </div>
+            <div class="col tab-content" id="v-pills-tabContent">
+                <div class="tab-pane fade {% if page == 'about' %}show active{% endif %}" id="v-pills-about" role="tabpanel" aria-labelledby="v-pills-about-tab" tabindex="0">
+                    <h4>About The Poll</h4>
+                    {{ about.text | markdown | safe }}
+                </div>
+                <div class="tab-pane fade {% if page == 'process' %}show active{% endif %}" id="v-pills-process" role="tabpanel" aria-labelledby="v-pills-process-tab" tabindex="0">
+                    <h4>Process</h4>
+                    {{ process.text | markdown | safe }}
+                </div>
+                <div class="tab-pane fade {% if page == 'voters' %}show active{% endif %}" id="v-pills-voters" role="tabpanel" aria-labelledby="v-pills-voters-tab" tabindex="0">
+                    <h2 class="text-center">Voter Hall of Fame</h4>
+                    {% for year, voters in years.items %}
+                        <div class="py-2">
+                            <h4 class="text-center">{{ year }} Year{% if year > 1 %}s{% endif %}</h4>
+                            <div class="row row-cols-xl-6">
+                                {% for voter in voters %}
+                                    <div class="col-2 py-1 text-center">
+                                        {{ voter }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>          
+	</div>
+{% endblock %}

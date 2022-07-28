@@ -5,7 +5,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
-from .models import Ballot, BallotEntry, Poll, Team
+from .models import AboutPage, Ballot, BallotEntry, Poll, UserRole, Team
 from .utils import get_outlier_analysis, get_result_set, get_results_comparison
 
 
@@ -242,4 +242,39 @@ def ballot_view(request, ballot_id):
         'ballot': ballot,
         'entries': entries,
         'ballot_analysis': ballot_analysis
+    })
+
+
+def about(request):
+    page = request.GET.get('p', "about")
+    about = AboutPage.objects.get(page="about")
+    process = AboutPage.objects.get(page="process")
+
+    voter_roles = UserRole.objects.filter(role=1)
+    voters = []
+    for role in voter_roles:
+        begin = role.start_date
+        end = role.end_date
+        if not end:
+            end = timezone.now()
+        num_years = int((end - begin).days / 365.2425)
+        if num_years > 0:
+            voters.append({'username': role.user.username, 'years': num_years})
+
+    voters = sorted(voters, key=lambda v: v['years'], reverse=True)
+    years = {}
+    for voter in voters:
+        if voter['years'] in years:
+            years[voter['years']].append(voter['username'])
+        else:
+            years[voter['years']] = [voter['username']]
+
+    for year, voters in years.items():
+        years[year] = sorted(voters, key=lambda v: v.lower())
+
+    return render(request, 'about.html', {
+        'page': page,
+        'about': about,
+        'process': process,
+        'years': years
     })
