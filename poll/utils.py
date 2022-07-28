@@ -1,4 +1,5 @@
 from datetime import datetime
+from math import ceil
 import pytz
 
 from .models import ResultSet
@@ -121,7 +122,7 @@ def get_outlier_analysis(ballot, results):
             score = max(0, score - SCORE_OFFSET)
         else:
             score = min(0, score + SCORE_OFFSET)
-        ranks.append((entry.rank, entry.team, score))
+        ranks.append((entry.rank, entry.team, score, _get_bg_color(score)))
         total_score += abs(score)
         teams_ranked.append(entry.team)
 
@@ -129,9 +130,9 @@ def get_outlier_analysis(ballot, results):
     for rank in range(1, 26):
         result = results.get(rank=rank)
         if result.team not in teams_ranked:
-            score = max(0, (result.points_per_voter / max(MIN_OUTLIER_FACTOR, result.std_dev)) - 0.5)
+            score = max(0, (result.points_per_voter / max(MIN_OUTLIER_FACTOR, result.std_dev)) - SCORE_OFFSET)
             if score > 0:
-                omissions.append((result.team, score))
+                omissions.append((result.team, score, _get_bg_color(score * -1)))
                 total_score += score
 
     return {
@@ -140,3 +141,17 @@ def get_outlier_analysis(ballot, results):
         'omissions': omissions,
         'score': total_score
     }
+
+
+def _get_bg_color(score):
+    if abs(score) >= 4.0:
+        color_value = 0
+    else:
+        color_value = ceil((1 - min(abs(score) / 4.0, 1)) * 256) - 1
+    if score > 0:
+        color = '#%02xff%02x' % (color_value, color_value)
+    else:
+        color = '#ff%02x%02x' % (color_value, color_value)
+
+    return color
+
