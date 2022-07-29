@@ -14,25 +14,15 @@ def index(request):
 
     results = get_results_comparison(most_recent_poll)
 
-    top25 = [r for r in results if r['rank'] <= 25]
-    others = [r for r in results if r['rank'] > 25]
-    up_movers = sorted(results, key=lambda r: r['ppv_diff'], reverse=True)[0:5]
-    down_movers = sorted(results, key=lambda r: r['ppv_diff'])[0:5]
-
-    if most_recent_poll.last_week:
-        lw_results = get_result_set(most_recent_poll.last_week)
-        top25_teams = [team['team'] for team in top25]
-        dropped = lw_results.filter(rank__lte=25).exclude(team__in=top25_teams)
-    else:
-        dropped = []
+    display_lists = _get_results_display_lists(most_recent_poll, results)
 
     return render(request, 'home.html', {
         'poll': most_recent_poll,
-        'top25': top25,
-        'others': others,
-        'up_movers': up_movers,
-        'down_movers': down_movers,
-        'dropped': dropped
+        'top25': display_lists['top25'],
+        'others': display_lists['others'],
+        'up_movers': display_lists['up_movers'],
+        'down_movers': display_lists['down_movers'],
+        'dropped': display_lists['dropped']
     })
 
 
@@ -76,28 +66,18 @@ def poll_view(request, poll_id):
 
     results = get_results_comparison(poll, options)
 
-    top25 = [r for r in results if r['rank'] <= 25]
-    others = [r for r in results if r['rank'] > 25]
-    up_movers = sorted(results, key=lambda r: r['ppv_diff'], reverse=True)[0:5]
-    down_movers = sorted(results, key=lambda r: r['ppv_diff'])[0:5]
-
-    if poll.last_week:
-        lw_results = get_result_set(poll.last_week)
-        top25_teams = [team['team'] for team in top25]
-        dropped = lw_results.filter(rank__lte=25).exclude(team__in=top25_teams)
-    else:
-        dropped = []
+    display_lists = _get_results_display_lists(poll, results)
 
     polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
 
     return render(request, 'poll_view.html', {
         'this_poll': poll,
         'options': options,
-        'top25': top25,
-        'others': others,
-        'up_movers': up_movers,
-        'down_movers': down_movers,
-        'dropped': dropped,
+        'top25': display_lists['top25'],
+        'others': display_lists['others'],
+        'up_movers': display_lists['up_movers'],
+        'down_movers': display_lists['down_movers'],
+        'dropped': display_lists['dropped'],
         'polls': polls,
         'show_filters': show_filters
     })
@@ -247,8 +227,8 @@ def ballot_view(request, ballot_id):
 
 def about(request):
     page = request.GET.get('p', "about")
-    about = AboutPage.objects.get(page="about")
-    process = AboutPage.objects.get(page="process")
+    about_text = AboutPage.objects.get(page="about")
+    faq = AboutPage.objects.get(page="faq")
 
     voter_roles = UserRole.objects.filter(role=1)
     voters = []
@@ -274,7 +254,59 @@ def about(request):
 
     return render(request, 'about.html', {
         'page': page,
-        'about': about,
-        'process': process,
+        'about': about_text,
+        'faq': faq,
         'years': years
     })
+
+
+def poll_post(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden()
+
+    poll = Poll.objects.filter(close_date__lt=timezone.now()).order_by('-close_date').first()
+    results = get_results_comparison(poll)
+    display_lists = _get_results_display_lists(poll, results)
+
+    links = {
+        'results': request.build_absolute_uri('/poll/view/%d/' % poll.id),
+        'provisional': request.build_absolute_uri(
+            '/poll/view/%d/?main=on&provisional=on&human=on&computer=on&hybrid=on&before_ap=on&after_ap=on' % poll.id
+        ),
+        'voters': request.build_absolute_uri('/poll/voters/%d/' % poll.id),
+        'ballots': request.build_absolute_uri('/poll/ballots/%d/' % poll.id),
+        'analysis': request.build_absolute_uri('/poll/analysis/%d/' % poll.id),
+        'about': request.build_absolute_uri('/about/?p=about'),
+        'faq': request.build_absolute_uri('/about/?p=faq'),
+        'hall': request.build_absolute_uri('/about/?p=voters'),
+    }
+
+    return render(request, 'poll_post.html', {
+        'poll': poll,
+        'top25': display_lists['top25'],
+        'next_ten': display_lists['others'][0:10],
+        'dropped': display_lists['dropped'],
+        'links': links
+    })
+
+
+def _get_results_display_lists(poll, results):
+    top25 = [r for r in results if r['rank'] <= 25]
+    others = [r for r in results if r['rank'] > 25]
+    up_movers = sorted(results, key=lambda r: r['ppv_diff'], reverse=True)[0:5]
+    down_movers = sorted(results, key=lambda r: r['ppv_diff'])[0:5]
+
+    if poll.last_week:
+        lw_results = get_result_set(poll.last_week)
+        top25_teams = [team['team'] for team in top25]
+        dropped = lw_results.filter(rank__lte=25).exclude(team__in=top25_teams)
+    else:
+        dropped = []
+
+    return {
+        'top25': top25,
+        'others': others,
+        'up_movers': up_movers,
+        'down_movers': down_movers,
+        'dropped': dropped
+    }

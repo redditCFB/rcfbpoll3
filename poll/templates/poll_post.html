@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <div class="container">
+        <h4>{{ poll }} /r/CFB Poll:
+            #1
+            {% if top25.0.rank_diff > 0 %}
+                <span style="text-transform: uppercase">{{ top25.0.team.short_name }}</span>
+            {% else %}
+                {{ top25.0.team.short_name }}
+            {% endif %}
+            #2 {{ top25.1.team.short_name }}
+            #3 {{ top25.2.team.short_name }}
+            #4 {{ top25.3.team.short_name }}
+            #5 {{ top25.4.team.short_name }}
+        </h4>
+        <br>
+        Here are the results for the {{ poll }} /r/CFB Poll:<br>
+        <br>
+        |Rank|Change|Team (#1 Votes)|Points|<br>
+        |:--:|:--:|:--|:--:|<br>
+        {% for rank in top25 %}
+            |{{ rank.rank }}
+            |{{ rank.rank_diff_str }}
+            |[](#f/{{ rank.team.handle }}) {{ rank.team.name }}{% if rank.first_place_votes > 0 %} ({{ rank.first_place_votes }}){% endif %}
+            |{{ rank.points }}|<br>
+        {% endfor %}
+        <br>
+        **Dropped:**
+        {% for rank in dropped %}
+            #{{ rank.rank }} {{ rank.team.short_name }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+        <br><br>
+        **Next Ten:**
+        {% for rank in next_ten %}
+            {{ rank.team.short_name }} {{ rank.points }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+        <br><br>
+        **POLL SITE**: https://poll.redditcfb.com/
+        <br><br>
+        * [Detailed Results]({{ links.results }})<br>
+        * [Results w/Provisional Voters]({{ links.provisional }})<br>
+        * [Voter List]({{ links.voters }})<br>
+        * [Ballots]({{ links.ballots }})<br>
+        * [Analysis]({{ links.analysis }})
+        <br><br>
+        [About The Poll]({{ links.about }}) | [FAQ]({{ links.faq }}) | [Voter Hall of Fame]({{ links.hall }})
+	</div>
+{% endblock %}
