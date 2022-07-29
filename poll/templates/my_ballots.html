@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load tz %}
+{% block content %}
+    <div class="container">
+        <h2>My Ballots</h2>
+        {% if open_polls %}
+            <h4>Open Polls</h4>
+            <table class="table table-striped">
+                <tr>
+                    <th>Year</th>
+                    <th>Week</th>
+                    <th>Open Date</th>
+                    <th>Close Date</th>
+                    <th>Publish Date</th>
+                    <th>Status</th>
+                    <th>Link</th>
+                </tr>
+                {% for poll in open_polls %}
+                    <tr>
+                        <td>{{ poll.poll.year }}</td>
+                        <td>{{ poll.poll.week }}</td>
+                        {% localtime on %}
+                            <td>{{ poll.poll.open_date }}</td>
+                            <td>{{ poll.poll.close_date }}</td>
+                            <td>{{ poll.poll.publish_date }}</td>
+                        {% endlocaltime %}
+                        {% if not poll.ballot %}
+                            <td class="table-danger">Not Started</td>
+                            <td><a class="btn btn-primary" role="button" href="/create_ballot/{{ poll.poll.id }}/">Create</a></td>
+                        {% elif not poll.ballot.submission_date %}
+                            <td class="table-warning">In Progress</td>
+                            <td><a class="btn btn-primary" role="button" href="/edit_ballot/{{ poll.ballot.id }}/">Edit</a></td>
+                        {% else %}
+                            <td class="table-success">Submitted</td>
+                            <td>
+                                <a class="btn btn-secondary" role="button" href="/ballot/{{ poll.ballot.id }}/">View</a>
+                                <a class="btn btn-primary" role="button" data-bs-toggle="modal" data-bs-target="#retractModal">
+                                    Edit
+                                </a>
+                            </td>
+                            <div class="modal fade" id="retractModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="retractModalLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="retractModalLabel">Retraction Warning</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>You have already submitted a ballot for this poll.</p>
+                                            <p>You can still edit your ballot if you would like, but you'll need to retract it first.</p>
+                                            <p>If you do choose to retract your ballot, you'll need to re-submit it once you're done making changes. <strong>Ballots that have been retracted without being resubmitted will not be counted in the poll and the week will count as a miss if it's a required week.</strong></p>
+                                            <p>Are you sure you'd like to retract your ballot?</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            <a class="btn btn-secondary" role="button" href="/ballot/{{ poll.ballot.id }}/">View Ballot</a>
+                                            <a class="btn btn-primary" role="button" href="/edit_ballot/{{ poll.ballot.id }}/">Retract And Edit Ballot</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </table>
+        {% endif %}
+        <h4>Closed Ballots</h4>
+        <table class="table table-striped">
+            <tr>
+                <th>Year</th>
+                <th>Week</th>
+                <th>Opened</th>
+                <th>Closed</th>
+                <th>Published</th>
+                <th>Submitted</th>
+                <th>Link</th>
+            </tr>
+
+            {% for ballot in closed_ballots %}
+                <tr>
+                    <td>{{ ballot.poll.year }}</td>
+                    <td>{{ ballot.poll.week }}</td>
+                    {% localtime on %}
+                        <td>{{ ballot.poll.open_date }}</td>
+                        <td>{{ ballot.poll.close_date }}</td>
+                        <td>{{ ballot.poll.publish_date }}</td>
+                        {% if ballot.submission_date %}
+                            <td>{{ ballot.submission_date }}</td>
+                        {% else %}
+                            <td>N/A</td>
+                        {% endif %}
+                    {% endlocaltime %}
+                    <td><a href="/ballot/{{ ballot.id }}">View</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+	</div>
+{% endblock %}

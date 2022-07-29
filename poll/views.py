@@ -5,7 +5,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
-from .models import AboutPage, Ballot, BallotEntry, Poll, UserRole, Team
+from .models import AboutPage, Ballot, BallotEntry, Poll, ProvisionalUserApplication, User, UserRole, Team
 from .utils import get_outlier_analysis, get_result_set, get_results_comparison
 
 
@@ -310,3 +310,67 @@ def _get_results_display_lists(poll, results):
         'down_movers': down_movers,
         'dropped': dropped
     }
+
+
+def my_ballots(request):
+    if not request.user.is_authenticated:
+        return redirect('/login/')
+
+    this_user = User.objects.get(username=request.user.username)
+    is_provisional = this_user.is_provisional_voter
+
+    if not this_user.is_voter or this_user.is_provisional_voter:
+        app = ProvisionalUserApplication.objects.filter(user=this_user).order_by('-submission_date').first()
+        if (
+            app and app.status == ProvisionalUserApplication.Status.REJECTED
+            and (timezone.now() - app.submission_date).days > 180
+        ):
+            app = None
+        return render(request, 'not_a_voter.html', {
+            'this_user': this_user,
+            'app': app
+        })
+
+    open_polls = []
+    open_poll_objects = Poll.objects.filter(
+        open_date__lt=timezone.now(), close_date__gt=timezone.now()
+    ).order_by('-publish_date')
+    for poll in open_poll_objects:
+        open_polls.append({
+            'poll': poll,
+            'ballot': Ballot.objects.filter(user=this_user, poll=poll).first()
+        })
+
+    closed_ballots = Ballot.objects.filter(
+        user=this_user, poll__close_date__lte=timezone.now()
+    ).order_by('-poll__publish_date')
+
+    return render(request, 'my_ballots.html', {
+        'this_user': this_user,
+        'is_provisional': is_provisional,
+        'open_polls': open_polls,
+        'closed_ballots': closed_ballots
+    })
+
+
+def apply_for_provisional(request):
+    if not request.user.is_authenticated:
+        return redirect('/login/')
+
+    this_user = User.objects.get(username=request.user.username)
+
+    if this_user.is_voter or this_user.is_provisional_voter:
+        return redirect('/my_ballots/')
+
+    app = ProvisionalUserApplication.objects.filter(user=this_user).order_by('-submission_date').first()
+    if app and (
+            app.status != ProvisionalUserApplication.Status.REJECTED
+            or (timezone.now() - app.submission_date).days <= 180
+    ):
+        return redirect('/my_ballots/')
+
+    new_app = ProvisionalUserApplication(
+        user=this_user, submission_date=timezone.now(), status=ProvisionalUserApplication.Status.OPEN
+    )
+    new_app.save()
+    return redirect('/my_ballots/')

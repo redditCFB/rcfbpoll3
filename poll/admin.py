@@ -47,7 +47,7 @@ def reject_applications(model_admin, request, queryset):
 class ApplicationAdmin(admin.ModelAdmin):
     list_display = ('user', 'user_page', 'submission_date', 'status')
     list_filter = ['status']
-    actions = ['accept_applications', 'reject_applications']
+    actions = [accept_applications, reject_applications]
     ordering = ['-submission_date']
 
 

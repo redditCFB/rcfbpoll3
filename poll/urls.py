@@ -15,5 +15,7 @@ urlpatterns = [
     path('poll/analysis/this_week/', views.analysis_this_week, name='analysis_this_week'),
     path('ballot/<int:ballot_id>/', views.ballot_view, name='ballot_view'),
     path('about/', views.about, name="about"),
-    path('poll_post/', views.poll_post, name="poll_post")
+    path('poll_post/', views.poll_post, name="poll_post"),
+    path('my_ballots/', views.my_ballots, name="my_ballots"),
+    path('apply_for_provisional/', views.apply_for_provisional, name="apply_for_provisional")
 ]
