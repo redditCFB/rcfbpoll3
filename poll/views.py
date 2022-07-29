@@ -257,7 +257,7 @@ def about(request):
         end = role.end_date
         if not end:
             end = timezone.now()
-        num_years = int((end - begin).days / 365.2425)
+        num_years = int(((end - begin).days / 365.2425) + 0.5)
         if num_years > 0:
             voters.append({'username': role.user.username, 'years': num_years})
 
