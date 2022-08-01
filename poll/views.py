@@ -1,4 +1,5 @@
 from math import ceil
+from urllib.parse import unquote
 
 from django.db.models.functions import Lower
 from django.http import HttpResponseForbidden
@@ -374,3 +375,76 @@ def apply_for_provisional(request):
     )
     new_app.save()
     return redirect('/my_ballots/')
+
+
+def create_ballot(request, poll_id):
+    poll = Poll.objects.get(pk=poll_id)
+
+    if not request.user.is_authenticated or not poll.is_open:
+        return HttpResponseForbidden()
+
+    this_user = User.objects.get(username=request.user.username)
+
+    if not this_user.is_voter or this_user.is_provisional_voter:
+        return HttpResponseForbidden()
+
+    ballot = Ballot.objects.filter(poll=poll, user=this_user).first()
+    if ballot:
+        return redirect('/edit_ballot/%d/' % ballot.id)
+
+    ballot = Ballot(
+        user=this_user,
+        poll=poll,
+        user_type=UserRole.Role.VOTER if this_user.is_voter else UserRole.Role.PROVISIONAL
+    )
+    ballot.save()
+    return redirect('/edit_ballot/%d/' % ballot.id)
+
+
+def edit_ballot(request, ballot_id):
+    ballot = Ballot.objects.get(pk=ballot_id)
+
+    if not ballot.poll.is_open or not ballot.user.username == request.user.username:
+        return HttpResponseForbidden()
+
+
+    if ballot.submission_date:
+        ballot.submission_date = None
+        ballot.save()
+    
+    entries = BallotEntry.objects.filter(ballot=ballot)
+
+    page = request.GET.get('p', "teams")
+
+    if page == "reasons":
+        return render(request, 'edit_reasons.html', {
+            'ballot': ballot,
+            'entries': entries
+        })
+    else:
+        teams = Team.objects.filter(use_for_ballot=True).order_by('name')
+        conferences = [
+            'AAC', 'ACC', 'Big Ten', 'Big 12', 'C-USA', 'FBS Independents', 'MAC', 'MWC', 'Pac-12',
+            'SEC', 'Sun Belt'
+        ]
+
+        team_groups = {}
+        for conference in conferences:
+            team_groups[conference] = []
+        team_groups['Others'] = []
+
+        for team in teams:
+            if team.conference in conferences:
+                team_groups[team.conference].append(team)
+            else:
+                team_groups['Others'].append(team)
+        
+        return render(request, 'edit_ballot.html', {
+            'ballot': ballot,
+            'entries': entries,
+            'team_groups': team_groups
+        })
+
+
+def save_ballot(request, ballot_id):
+    
