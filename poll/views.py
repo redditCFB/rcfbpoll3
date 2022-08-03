@@ -8,7 +8,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 
 from .models import AboutPage, Ballot, BallotEntry, Poll, ProvisionalUserApplication, User, UserRole, Team
-from .utils import get_outlier_analysis, get_result_set, get_results_comparison
+from .utils import check_for_errors, check_for_warnings, get_outlier_analysis, get_result_set, get_results_comparison
 
 
 def index(request):
@@ -457,14 +457,16 @@ def save_ballot(request, ballot_id):
     overall_rationale = unquote(request.POST.get('overall_rationale'))
     entries = json.loads(request.POST.get('entries'))
 
-    ballot.poll_type = poll_type
+    if poll_type in Ballot.BallotType:
+        ballot.poll_type = poll_type
     ballot.overall_rationale = overall_rationale
     ballot.save()
 
+    new_entries = []
     for entry in entries:
-        ballot_entry = BallotEntry.objects.filter(ballot=ballot, rank=entry['rank']).first()
+        ballot_entry = BallotEntry.objects.filter(ballot=ballot, team=Team.objects.get(handle=entry['team'])).first()
         if ballot_entry:
-            ballot_entry.team = Team.objects.get(handle=entry['team'])
+            ballot_entry.rank = entry['rank']
             ballot_entry.rationale = unquote(entry['rationale'])
         else:
             ballot_entry = BallotEntry(
@@ -474,7 +476,8 @@ def save_ballot(request, ballot_id):
                 rationale=unquote(entry['rationale'])
             )
         ballot_entry.save()
-    BallotEntry.objects.filter(ballot=ballot, rank__gt=len(entries)).delete()
+        new_entries.append(ballot_entry)
+    BallotEntry.objects.filter(ballot=ballot).exclude(id__in=[entry.id for entry in new_entries]).delete()
 
     if page == 'validate':
         return redirect('/ballot/validate/%d/' % ballot.id)
@@ -490,4 +493,31 @@ def validate_ballot(request, ballot_id):
     if not ballot.poll.is_open or not ballot.user.username == request.user.username:
         return HttpResponseForbidden()
 
-    entries = BallotEntry
+    entries = BallotEntry.objects.filter(ballot=ballot)
+
+    errors = check_for_errors(ballot)
+    warnings = check_for_warnings(ballot)
+
+    return render(request, 'validate_ballot.html', {
+        'ballot': ballot,
+        'entries': entries,
+        'errors': errors,
+        'warnings': warnings
+    })
+
+
+def submit_ballot(request, ballot_id):
+    ballot = Ballot.objects.get(pk=ballot_id)
+
+    if not ballot.poll.is_open or not ballot.user.username == request.user.username:
+        return HttpResponseForbidden()
+
+    errors = check_for_errors(ballot)
+
+    if errors:
+        return redirect('/ballot/validate/%d/' % ballot.id)
+    else:
+        ballot.submission_date = timezone.now()
+        ballot.save()
+
+    return redirect('/my_ballots/')

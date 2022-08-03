@@ -2,7 +2,7 @@ from datetime import datetime
 from math import ceil
 import pytz
 
-from .models import ResultSet
+from .models import Ballot, BallotEntry, ResultSet
 
 MIN_OUTLIER_FACTOR = 1
 SCORE_OFFSET = 0.75
@@ -155,3 +155,44 @@ def _get_bg_color(score):
 
     return color
 
+
+def check_for_errors(ballot):
+    errors = []
+
+    entries = BallotEntry.objects.filter(ballot=ballot)
+    if len(entries) < 25:
+        errors.append('Too few entries.')
+    if len(entries) > 25:
+        errors.append('Too many entries.')
+
+    if not ballot.poll_type:
+        errors.append('Missing poll type.')
+
+    for entry in entries:
+        if not entry.team.use_for_ballot:
+            errors.append('%s not a valid team option.' % entry.team.short_name)
+
+    return errors
+
+
+def check_for_warnings(ballot):
+    warnings = []
+
+    entries = BallotEntry.objects.filter(ballot=ballot).order_by('rank')
+
+    lw_poll_results = get_result_set(ballot.poll.last_week)[:30]
+    lw_user_ballot = Ballot.objects.filter(poll=ballot.poll.last_week, user=ballot.user).first()
+
+    for entry in entries[:20]:
+        if not lw_poll_results.filter(team=entry.team).exists():
+            warnings.append("Ranked team in top 20 who wasn't in top 30 last week: %s" % entry.team.short_name)
+    for result in lw_poll_results[:15]:
+        if not entries.filter(team=result.team).exists():
+            warnings.append("Missing team from last week's top 15: %s" % result.team.short_name)
+    if lw_user_ballot:
+        lw_entries = BallotEntry.objects.filter(ballot=lw_user_ballot).order_by('rank')
+        for entry in lw_entries[:20]:
+            if not entries.filter(team=entry.team).exists():
+                warnings.append("Missing team from your top 20 last week: %s" % entry.team.short_name)
+
+    return warnings
