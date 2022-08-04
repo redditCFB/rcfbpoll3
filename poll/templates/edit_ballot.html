@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+	<div class="container">
+		<h4 class="py-3">{{ ballot.poll }}</h4>
+        <div class="form-floating my-3 col-3">
+            <select class="form-select" id="poll-type">
+                <option {% if ballot.poll_type is null %}selected{% endif %}>(unspecified)</option>
+                <option {% if ballot.poll_type == 1 %}selected{% endif %}>human</option>
+                <option {% if ballot.poll_type == 2 %}selected{% endif %}>computer</option>
+                <option {% if ballot.poll_type == 3 %}selected{% endif %}>hybrid</option>
+            </select>
+            <label id="poll-type-label" for="poll-type">Ballot Type:</label>
+        </div>
+        <div class="form-floating my-3">
+            <textarea class="form-control" placeholder="" id="overall-rationale"></textarea>
+            <label for="overall-rationale">Overall Rationale/Methodology</label>
+        </div>
+        <div class="row flex-lg-row py-3 justify-content-center">
+            <p>Current Teams Selected: <span id="current-teams">0</span>/25</p>
+			<div class="col-xl-12 col-xxl-6 d-flex align-items-start">
+                <div class="nav flex-column nav-pills me-3" id="conference-tabs" role="tablist" aria-orientation="vertical">
+                    {% for conference in team_groups %}
+                        <button class="nav-link" id="{{ conference }}-tab" data-bs-toggle="pill" data-bs-target="#{{ conference }}" type="button" role="tab" aria-controls="{{ conference }}" aria-selected="false">{{ conference }}</button>
+                    {% endfor %}
+                </div>
+                <div class="tab-content" id="conference-teams">
+                    {% for conference, teams in team_groups.items %}
+                        <div class="tab-pane fade" id="{{ conference }}" role="tabpanel" aria-labelledby="{{ conference }}-tab" tabindex="0">
+                            <div class="row justify-content-center">
+                                {% for team in teams %}
+                                    <div class="col-xxl-4 col-xl-2 col-lg-3 col-md-4 col-6 my-2">
+                                        <div class="card text-center">
+                                            {% with "images/full60/"|add:team.handle|add:".png" as static_img %}
+                                                <img class="card-img-top selector-logo mx-auto mt-2" src="{% static static_img %}" alt="">
+                                            {% endwith %}
+                                            <div class="card-body">
+                                                <p>{{ team.short_name }}</p>
+                                                <button class="btn btn-success add-button" value="{{ team.handle }}">Add</button>
+                                                <button class="btn btn-danger remove-button d-none" value="{{ team.handle }}">Remove</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+			</div>
+			<div class="col-xl-6 col-lg-7 col-md-9 d-flex flex-column my-3">
+                <ul class="bg-light" id="ballot">
+
+                </ul>
+			</div>
+		</div>
+	</div>
+    <script id="team-data" type="application/json">{{ teams|json_script:"team-data" }}</script>
+    <script src="{% static 'javascript/ballot.js' %}"></script>
+{% endblock %}

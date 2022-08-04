@@ -6,10 +6,6 @@ body {
 	text-align: center;
 }
 
-#teams-accordion {
-	padding: 10px;
-}
-
 .team {
 	margin-bottom: 10px;
 	min-height: 25px;
@@ -41,11 +37,6 @@ body {
 	margin: 10px;
 }
 
-#overall-rationale {
-	width: 575px;
-	margin: 10px;
-}
-
 .rationale-button {
 	float: right;
 	margin-right: 50px;
@@ -68,14 +59,6 @@ body {
 	background-color: LightCyan;
 }
 
-#poll-type {
-	width: 200px;
-}
-
-#poll-type-label, #poll-type {
-	display: inline
-}
-
 .close-button {
 	float: right;
 	height: 15px;
@@ -91,6 +74,12 @@ body {
     height: 25px;
     width: auto;
     margin-left: 10px;
+}
+
+.selector-logo {
+    height: 40px;
+    width: 60px;
+	horiz-align: center;
 }
 
 #save-button{

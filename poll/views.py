@@ -423,25 +423,31 @@ def edit_ballot(request, ballot_id):
         })
     else:
         teams = Team.objects.filter(use_for_ballot=True).order_by('name')
-        conferences = [
-            'AAC', 'ACC', 'Big Ten', 'Big 12', 'C-USA', 'FBS Independents', 'MAC', 'MWC', 'Pac-12',
-            'SEC', 'Sun Belt'
-        ]
+        conferences = list(
+            teams.filter(division='FBS').values_list('conference', flat=True).distinct().order_by('conference')
+        )
 
         team_groups = {}
         for conference in conferences:
             team_groups[conference] = []
         team_groups['Others'] = []
 
+        team_dict = {}
+
         for team in teams:
             if team.conference in conferences:
                 team_groups[team.conference].append(team)
             else:
                 team_groups['Others'].append(team)
-        
+            team_dict[team.handle] = {
+                'name': team.name,
+                'short_name': team.short_name
+            }
+
         return render(request, 'edit_ballot.html', {
             'ballot': ballot,
             'entries': entries,
+            'teams': team_dict,
             'team_groups': team_groups
         })
 

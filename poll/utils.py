@@ -2,7 +2,7 @@ from datetime import datetime
 from math import ceil
 import pytz
 
-from .models import Ballot, BallotEntry, ResultSet
+from .models import Ballot, BallotEntry, ResultSet, UserRole
 
 MIN_OUTLIER_FACTOR = 1
 SCORE_OFFSET = 0.75
@@ -194,5 +194,18 @@ def check_for_warnings(ballot):
         for entry in lw_entries[:20]:
             if not entries.filter(team=entry.team).exists():
                 warnings.append("Missing team from your top 20 last week: %s" % entry.team.short_name)
+    ballot_count = Ballot.objects.filter(
+        poll=ballot.poll, submission_date__isnull=False, user_type=UserRole.Role.VOTER
+    ).count()
+    if ballot_count >= 10:
+        for entry in entries:
+            entry_count = BallotEntry.objects.filter(
+                ballot__poll=ballot.poll,
+                ballot__submission_date__isnul=False,
+                ballot__user_type=UserRole.Role.VOTER,
+                team=entry.team
+            ).count()
+            if entry_count / ballot_count < 0.1:
+                warnings.append("Team on less than 10% of other ballots: %s" % entry.team.short_name)
 
     return warnings
