@@ -30,7 +30,7 @@
                             <td><a class="btn btn-primary" role="button" href="/create_ballot/{{ poll.poll.id }}/">Create</a></td>
                         {% elif not poll.ballot.submission_date %}
                             <td class="table-warning">In Progress</td>
-                            <td><a class="btn btn-primary" role="button" href="/edit_ballot/{{ poll.ballot.id }}/">Edit</a></td>
+                            <td><a class="btn btn-primary" role="button" href="/ballot/edit/{{ poll.ballot.id }}/">Edit</a></td>
                         {% else %}
                             <td class="table-success">Submitted</td>
                             <td>

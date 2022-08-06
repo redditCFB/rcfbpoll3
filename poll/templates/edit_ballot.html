@@ -18,6 +18,7 @@
         </div>
         <div class="row flex-lg-row py-3 justify-content-center">
             <p>Current Teams Selected: <span id="current-teams">0</span>/25</p>
+            <div id="alertPlaceholder"></div>
 			<div class="col-xl-12 col-xxl-6 d-flex align-items-start">
                 <div class="nav flex-column nav-pills me-3" id="conference-tabs" role="tablist" aria-orientation="vertical">
                     {% for conference in team_groups %}
@@ -48,12 +49,16 @@
                 </div>
 			</div>
 			<div class="col-xl-6 col-lg-7 col-md-9 d-flex flex-column my-3">
-                <ul class="bg-light" id="ballot">
-
-                </ul>
+                <ul class="list-unstyled bg-light" id="ballot"></ul>
+                <div class="row justify-content-end">
+                    <button class="col-auto mx-1 btn btn-secondary" id="reasons-button">Save & Add Reasons</button>
+                    <button class="col-auto mx-1 btn btn-secondary" id="save-button">Save</button>
+                    <button class="col-auto mx-1 btn btn-primary" id="validate-button">Validate & Submit</button>
+                </div>
 			</div>
 		</div>
 	</div>
-    <script id="team-data" type="application/json">{{ teams|json_script:"team-data" }}</script>
+    {{ teams|json_script:"team-data" }}
+    <input class="hidden" id="ballot-id" value="{{ ballot.id }}"></input>
     <script src="{% static 'javascript/ballot.js' %}"></script>
 {% endblock %}

@@ -81,16 +81,3 @@ body {
     width: 60px;
 	horiz-align: center;
 }
-
-#save-button{
-    margin: 10px;
-}
-
-#validate-button, #unlock-button {
-    margin-right: 5px;
-    display: inline;
-}
-
-#validation-results {
-    padding-top: 5px;
-}

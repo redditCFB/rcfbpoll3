@@ -473,13 +473,14 @@ def save_ballot(request, ballot_id):
         ballot_entry = BallotEntry.objects.filter(ballot=ballot, team=Team.objects.get(handle=entry['team'])).first()
         if ballot_entry:
             ballot_entry.rank = entry['rank']
-            ballot_entry.rationale = unquote(entry['rationale'])
+            if 'rationale' in entry:
+                ballot_entry.rationale = unquote(entry['rationale'])
         else:
             ballot_entry = BallotEntry(
                 ballot=ballot,
                 team=Team.objects.get(handle=entry['team']),
                 rank=entry['rank'],
-                rationale=unquote(entry['rationale'])
+                rationale=unquote(entry['rationale']) if 'rationale' in entry else ''
             )
         ballot_entry.save()
         new_entries.append(ballot_entry)
