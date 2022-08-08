@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+	<div class="container">
+		<h4 class="py-3">{{ ballot.poll }}</h4>
+        <form id="save-form" action="/ballot/save/{{ ballot.id }}/reasons/" method="post">
+            {% csrf_token %}
+            <div class="form-floating my-3 col-3">
+                <select class="form-select" id="poll-type" name="poll-type">
+                    <option value="" {% if ballot.poll_type is null %}selected{% endif %}>(unspecified)</option>
+                    <option value="1" {% if ballot.poll_type == 1 %}selected{% endif %}>human</option>
+                    <option value="2" {% if ballot.poll_type == 2 %}selected{% endif %}>computer</option>
+                    <option value="3" {% if ballot.poll_type == 3 %}selected{% endif %}>hybrid</option>
+                </select>
+                <label id="poll-type-label" for="poll-type">Ballot Type:</label>
+            </div>
+            <div class="form-floating my-3">
+                <textarea class="form-control" placeholder="" id="overall-rationale" name="overall-rationale">{{ ballot.overall_rationale }}</textarea>
+                <label for="overall-rationale">Overall Rationale/Methodology</label>
+            </div>
+            <label for="page"></label>
+            <select class="form-select d-none" id="page" name="page">
+                <option value="teams">teams</option>
+                <option value="reasons">reasons</option>
+                <option value="validate">validate</option>
+            </select>
+            <h5>Team Reasons</h5>
+            <fieldset id="entries" name="entries">
+                {% for entry in entries %}
+                    <div class="form-floating my-3">
+                        <textarea class="form-control" placeholder="" id="rationale-{{ entry.rank }}" name="rationale-{{ entry.rank }}">{{ entry.rationale }}</textarea>
+                        <label for="rationale-{{ entry.rank }}">
+                            #{{ entry.rank }}
+                            {% with "images/full60/"|add:entry.team.handle|add:".png" as static_img %}
+                                <img class="reason-logo me-1" src="{% static static_img %}" alt="">
+                            {% endwith %}
+                            {{ entry.team.name }}
+                        </label>
+                    </div>
+                {% endfor %}
+            </fieldset>
+            <div class="row justify-content-end">
+                <button class="col-auto mx-1 btn btn-secondary" id="teams-button">Save & Change Teams</button>
+                <button class="col-auto mx-1 btn btn-secondary" id="save-button">Save</button>
+                <button class="col-auto mx-1 btn btn-primary" id="validate-button">Validate & Submit</button>
+            </div>
+        </form>
+	</div>
+    <script src="{% static 'javascript/ballot_reasons.js' %}"></script>
+{% endblock %}

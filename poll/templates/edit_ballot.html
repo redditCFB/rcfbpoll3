@@ -3,19 +3,33 @@
 {% block content %}
 	<div class="container">
 		<h4 class="py-3">{{ ballot.poll }}</h4>
-        <div class="form-floating my-3 col-3">
-            <select class="form-select" id="poll-type">
-                <option {% if ballot.poll_type is null %}selected{% endif %}>(unspecified)</option>
-                <option {% if ballot.poll_type == 1 %}selected{% endif %}>human</option>
-                <option {% if ballot.poll_type == 2 %}selected{% endif %}>computer</option>
-                <option {% if ballot.poll_type == 3 %}selected{% endif %}>hybrid</option>
+        <form id="save-form" action="/ballot/save/{{ ballot.id }}/" method="post">
+            {% csrf_token %}
+            <div class="form-floating my-3 col-3">
+                <select class="form-select" id="poll-type" name="poll-type">
+                    <option value="" {% if ballot.poll_type is null %}selected{% endif %}>(unspecified)</option>
+                    <option value="1" {% if ballot.poll_type == 1 %}selected{% endif %}>human</option>
+                    <option value="2" {% if ballot.poll_type == 2 %}selected{% endif %}>computer</option>
+                    <option value="3" {% if ballot.poll_type == 3 %}selected{% endif %}>hybrid</option>
+                </select>
+                <label id="poll-type-label" for="poll-type">Ballot Type:</label>
+            </div>
+            <div class="form-floating my-3">
+                <textarea class="form-control" placeholder="" id="overall-rationale" name="overall-rationale">{{ ballot.overall_rationale }}</textarea>
+                <label for="overall-rationale">Overall Rationale/Methodology</label>
+            </div>
+            <label for="page"></label>
+            <select class="form-select d-none" id="page" name="page">
+                <option value="teams">teams</option>
+                <option value="reasons">reasons</option>
+                <option value="validate">validate</option>
             </select>
-            <label id="poll-type-label" for="poll-type">Ballot Type:</label>
-        </div>
-        <div class="form-floating my-3">
-            <textarea class="form-control" placeholder="" id="overall-rationale"></textarea>
-            <label for="overall-rationale">Overall Rationale/Methodology</label>
-        </div>
+            <fieldset id="entries" name="entries">
+                {% for rank in ranks %}
+                    <input type="hidden" id="rank-{{ rank }}" name="rank-{{ rank }}">
+                {% endfor %}
+            </fieldset>
+        </form>
         <div class="row flex-lg-row py-3 justify-content-center">
             <p>Current Teams Selected: <span id="current-teams">0</span>/25</p>
             <div id="alertPlaceholder"></div>
@@ -49,7 +63,8 @@
                 </div>
 			</div>
 			<div class="col-xl-6 col-lg-7 col-md-9 d-flex flex-column my-3">
-                <ul class="list-unstyled bg-light" id="ballot"></ul>
+                <ul class="list-unstyled bg-light" id="ballot">
+                </ul>
                 <div class="row justify-content-end">
                     <button class="col-auto mx-1 btn btn-secondary" id="reasons-button">Save & Add Reasons</button>
                     <button class="col-auto mx-1 btn btn-secondary" id="save-button">Save</button>
@@ -59,6 +74,8 @@
 		</div>
 	</div>
     {{ teams|json_script:"team-data" }}
-    <input class="hidden" id="ballot-id" value="{{ ballot.id }}"></input>
     <script src="{% static 'javascript/ballot.js' %}"></script>
+    {% for entry in entries %}
+        <script>addTeamToBallot("{{ entry.team.handle }}");</script>
+    {% endfor %}
 {% endblock %}

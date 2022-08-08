@@ -76,6 +76,11 @@ body {
     margin-left: 10px;
 }
 
+.reason-logo {
+    height: 15px;
+    width: auto;
+}
+
 .selector-logo {
     height: 40px;
     width: 60px;

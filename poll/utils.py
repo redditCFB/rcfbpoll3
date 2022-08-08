@@ -180,11 +180,11 @@ def check_for_warnings(ballot):
 
     entries = BallotEntry.objects.filter(ballot=ballot).order_by('rank')
 
-    lw_poll_results = get_result_set(ballot.poll.last_week)[:30]
+    lw_poll_results = get_result_set(ballot.poll.last_week)
     lw_user_ballot = Ballot.objects.filter(poll=ballot.poll.last_week, user=ballot.user).first()
 
     for entry in entries[:20]:
-        if not lw_poll_results.filter(team=entry.team).exists():
+        if not lw_poll_results.filter(team=entry.team, rank__lte=30).exists():
             warnings.append("Ranked team in top 20 who wasn't in top 30 last week: %s" % entry.team.short_name)
     for result in lw_poll_results[:15]:
         if not entries.filter(team=result.team).exists():

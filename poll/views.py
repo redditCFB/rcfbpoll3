@@ -1,9 +1,8 @@
-import json
 from math import ceil
 from urllib.parse import unquote
 
 from django.db.models.functions import Lower
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
@@ -412,7 +411,7 @@ def edit_ballot(request, ballot_id):
         ballot.submission_date = None
         ballot.save()
     
-    entries = BallotEntry.objects.filter(ballot=ballot)
+    entries = BallotEntry.objects.filter(ballot=ballot).order_by('rank')
 
     page = request.GET.get('p', "teams")
 
@@ -448,20 +447,27 @@ def edit_ballot(request, ballot_id):
             'ballot': ballot,
             'entries': entries,
             'teams': team_dict,
-            'team_groups': team_groups
+            'team_groups': team_groups,
+            'ranks': range(1, 26)
         })
 
 
-def save_ballot(request, ballot_id):
+def save_teams(request, ballot_id):
     ballot = Ballot.objects.get(pk=ballot_id)
 
     if not ballot.poll.is_open or not ballot.user.username == request.user.username:
         return HttpResponseForbidden()
 
-    page = request.POST.get('page')
-    poll_type = request.POST.get('poll_type')
-    overall_rationale = unquote(request.POST.get('overall_rationale'))
-    entries = json.loads(request.POST.get('entries'))
+    page = request.POST['page']
+    poll_type = int(request.POST['poll-type'])
+    overall_rationale = unquote(request.POST['overall-rationale'])
+    entries = []
+    for i in range(1, 26):
+        team_handle = request.POST['rank-%d' % i]
+        if team_handle != '':
+            entries.append(team_handle)
+        else:
+            break
 
     if poll_type in Ballot.BallotType:
         ballot.poll_type = poll_type
@@ -469,22 +475,56 @@ def save_ballot(request, ballot_id):
     ballot.save()
 
     new_entries = []
-    for entry in entries:
-        ballot_entry = BallotEntry.objects.filter(ballot=ballot, team=Team.objects.get(handle=entry['team'])).first()
+    for i, entry in enumerate(entries):
+        ballot_entry = BallotEntry.objects.filter(ballot=ballot, team=Team.objects.get(handle=entry)).first()
         if ballot_entry:
-            ballot_entry.rank = entry['rank']
-            if 'rationale' in entry:
-                ballot_entry.rationale = unquote(entry['rationale'])
+            ballot_entry.rank = i + 1
         else:
             ballot_entry = BallotEntry(
                 ballot=ballot,
-                team=Team.objects.get(handle=entry['team']),
-                rank=entry['rank'],
-                rationale=unquote(entry['rationale']) if 'rationale' in entry else ''
+                team=Team.objects.get(handle=entry),
+                rank=i + 1
             )
         ballot_entry.save()
         new_entries.append(ballot_entry)
     BallotEntry.objects.filter(ballot=ballot).exclude(id__in=[entry.id for entry in new_entries]).delete()
+
+    if page == 'validate':
+        return redirect('/ballot/validate/%d/' % ballot.id)
+    elif page == 'reasons':
+        return redirect('/ballot/edit/%d/?p=reasons' % ballot.id)
+    else:
+        return redirect('/ballot/edit/%d/' % ballot.id)
+
+
+def save_reasons(request, ballot_id):
+    ballot = Ballot.objects.get(pk=ballot_id)
+
+    if not ballot.poll.is_open or not ballot.user.username == request.user.username:
+        return HttpResponseForbidden()
+
+    page = request.POST['page']
+    poll_type = request.POST['poll-type']
+    overall_rationale = unquote(request.POST['overall-rationale'])
+    reasons = []
+    for i in range(1, 26):
+        if 'rationale-%d' % i in request.POST.keys():
+            reasons.append(request.POST['rationale-%d' % i])
+        else:
+            break
+
+    if poll_type in Ballot.BallotType:
+        ballot.poll_type = poll_type
+    ballot.overall_rationale = overall_rationale
+    ballot.save()
+
+    for i, reason in enumerate(reasons):
+        ballot_entry = BallotEntry.objects.filter(ballot=ballot, rank=i + 1).first()
+        if ballot_entry:
+            ballot_entry.rationale = reason
+            ballot_entry.save()
+        else:
+            return HttpResponseBadRequest()
 
     if page == 'validate':
         return redirect('/ballot/validate/%d/' % ballot.id)
@@ -500,7 +540,7 @@ def validate_ballot(request, ballot_id):
     if not ballot.poll.is_open or not ballot.user.username == request.user.username:
         return HttpResponseForbidden()
 
-    entries = BallotEntry.objects.filter(ballot=ballot)
+    entries = BallotEntry.objects.filter(ballot=ballot).order_by('rank')
 
     errors = check_for_errors(ballot)
     warnings = check_for_warnings(ballot)

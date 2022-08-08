@@ -40,33 +40,35 @@ $(function() {
 });
 
 function addTeamToBallot(team_handle) {
+    let ballot = $('#ballot');
     let rank = (
-        '<li class="sort m-1" id="rank-' + team_handle + '" value="' + team_handle + '">' +
+        '<li class="sort m-1" id="rank-' + team_handle + '">' +
             '<div class="card">' +
                 '<div class="card-header">' +
-                    '<span class="rank">' + ($('#ballot').children().length + 1) + '</span>' +
+                    '<span class="rank">' + (ballot.children().length + 1) + '</span>' +
                     '<img class="team-logo me-1" src="/static/images/full60/' + team_handle + '.png" alt="">' +
                     teams[team_handle].name +
                     '<button class="btn btn-close remove-rank float-end" value="' + team_handle + '" aria-label="Close"></button>' +
                 '</div>' +
             '</div>' +
+            '<input type="hidden" class="team-handle" value="'+ team_handle + '">' +
         '</li>'
     );
-    $('#ballot').append(rank);
+    ballot.append(rank);
     $(".remove-rank").click(function() {
         let team_handle = $(this)[0].value;
         removeTeamFromBallot(team_handle);
     });
-    $('.add-button').filter(function(){return this.value==team_handle}).addClass('d-none');
-    $('.remove-button').filter(function(){return this.value==team_handle}).removeClass('d-none');
+    $('.add-button').filter(function(){return this.value === team_handle}).addClass('d-none');
+    $('.remove-button').filter(function(){return this.value === team_handle}).removeClass('d-none');
     resetRankings();
-    $('#current-teams').text($('#ballot').children().length)
+    $('#current-teams').text(ballot.children().length)
 }
 
 function removeTeamFromBallot(team_handle) {
     $('#rank-' + team_handle).remove();
-    $('.remove-button').filter(function(){return this.value==team_handle}).addClass('d-none');
-    $('.add-button').filter(function(){return this.value==team_handle}).removeClass('d-none');
+    $('.remove-button').filter(function(){return this.value === team_handle}).addClass('d-none');
+    $('.add-button').filter(function(){return this.value === team_handle}).removeClass('d-none');
     resetRankings();
     $('#current-teams').text($('#ballot').children().length)
 }
@@ -78,45 +80,15 @@ function resetRankings() {
 }
 
 function saveBallot(page) {
-    let ballot_id = $('#ballot-id')[0].value
-    let poll_type = $("#poll-type option:selected").text();
-    let overall_rationale = encodeURIComponent($("#overall-rationale").text());
+    $('#page').val(page)
 
-    let entries = [];
+    let entries = $('#entries').children();
     let teams = $('#ballot').children();
-    for (i = 0; i < teams.length; i++) {
-        let entry = {
-            rank: i + 1,
-            team: $(teams[i])[0].value
-        };
-        entries.push(entry);
+    if (teams) {
+        for (let i = 0; i < teams.length; i++) {
+            $(entries[i]).val($(teams[i]).find('.team-handle').val())
+        }
     }
-    post('/ballot/save/' + ballot_id + '/', {
-        page: page,
-        poll_type: poll_type,
-        overall_rational: overall_rationale,
-        entries: entries
-    });
-}
 
-function post(path, parameters) {
-    var form = $('<form></form>');
-
-    form.attr("method", "post");
-    form.attr("action", path);
-
-    $.each(parameters, function(key, value) {
-        var field = $('<input></input>');
-
-        field.attr("type", "hidden");
-        field.attr("name", key);
-        field.attr("value", value);
-
-        form.append(field);
-    });
-
-    // The form needs to be a part of the document in
-    // order for us to be able to submit it.
-    $(document.body).append(form);
-    form.submit();
+    $('#save-form').submit()
 }

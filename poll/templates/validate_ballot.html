@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-6">
+                <p>
+                    <strong>Ballot Type:</strong> {{ ballot.get_poll_type_display }}
+                </p>
+                <p>
+                    <strong>Overall Rationale:</strong> {{ ballot.overall_rationale }}
+                </p>
+                <table class="table table-sm table-striped">
+                    <tr>
+                        <th>Rank</th>
+                        <th>Team</th>
+                        <th>Reason</th>
+                    </tr>
+                    {% for entry in entries %}
+                        <tr>
+                            <td>{{ entry.rank }}</td>
+                            <td>
+                                {% with "images/full60/"|add:entry.team.handle|add:".png" as static_img %}
+                                    <img class="team-logo" src="{% static static_img %}" alt="">
+                                {% endwith %}
+                                {{ entry.team.short_name }}
+                                </a>
+                            </td>
+                            <td>{{ entry.rationale }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <div class="col-6">
+                {% if errors %}
+                    <h5>Errors:</h5>
+                    {% for error in errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                {% else %}
+                    <p>No errors.</p>
+                {% endif %}
+                {% if warnings %}
+                    <h5>Warnings:</h5>
+                    <p>NOTE: Warnings are for informational purposes only in order to inform voters of possible mistakes. Unusual selections are acceptable.</p>
+                    {% for warning in warnings %}
+                        <p>{{ warning }}</p>
+                    {% endfor %}
+                {% else %}
+                    <p>No warnings.</p>
+                {% endif %}
+                <div class="row justify-content-end">
+                    <a role="button" class="col-auto mx-1 btn btn-secondary" href="/ballot/edit/{{ ballot.id }}/">Go Back To Teams</a>
+                    <a role="button" class="col-auto mx-1 btn btn-secondary" href="/ballot/edit/{{ ballot.id }}/?p='reasons'">Go Back To Reasons</a>
+                    {% if not errors %}
+                        <a role="button" class="col-auto mx-1 btn btn-primary" href="/ballot/submit/{{ ballot.id }}/">Submit</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
