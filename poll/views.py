@@ -459,7 +459,7 @@ def save_teams(request, ballot_id):
         return HttpResponseForbidden()
 
     page = request.POST['page']
-    poll_type = int(request.POST['poll-type'])
+    poll_type = int(request.POST['poll-type']) if request.POST['poll-type'] != '' else ''
     overall_rationale = unquote(request.POST['overall-rationale'])
     entries = []
     for i in range(1, 26):
