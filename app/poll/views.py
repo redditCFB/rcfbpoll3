@@ -410,7 +410,7 @@ def edit_ballot(request, ballot_id):
     if ballot.submission_date:
         ballot.submission_date = None
         ballot.save()
-    
+
     entries = BallotEntry.objects.filter(ballot=ballot).order_by('rank')
 
     page = request.GET.get('p', "teams")

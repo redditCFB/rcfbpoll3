@@ -1,3 +1,0 @@
-django==3.2.5
-markdown==3.3.4
-social-auth-app-djano==5.0.0
