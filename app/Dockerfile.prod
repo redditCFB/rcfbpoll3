@@ -34,8 +34,9 @@ RUN addgroup --system app && adduser --system --ingroup app app
 
 # create the appropriate directories
 ENV HOME=/home/app
-ENV APP_HOME=/home/app/web
+ENV APP_HOME=/home/app/poll
 RUN mkdir $APP_HOME
+RUN mkdir $APP_HOME/static
 WORKDIR $APP_HOME
 
 RUN apt-get update && apt-get -y dist-upgrade
@@ -60,4 +61,4 @@ RUN chown -R app:app $APP_HOME
 USER app
 
 # run entrypoint.prod.sh
-ENTRYPOINT ["/home/app/web/entrypoint.sh"]
+ENTRYPOINT ["/home/app/poll/entrypoint.sh"]
