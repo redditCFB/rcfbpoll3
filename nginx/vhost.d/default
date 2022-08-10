@@ -1,0 +1,4 @@
+location /static/ {
+  alias /home/app/poll/static/;
+  add_header Access-Control-Allow-Origin *;
+}

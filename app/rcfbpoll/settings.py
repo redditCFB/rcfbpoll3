@@ -153,5 +153,7 @@ SOCIAL_AUTH_PIPELINE = (
     'poll.pipeline.check_for_user',
 )
 
-SOCIAL_AUTH_REDDIT_KEY = ''
-SOCIAL_AUTH_REDDIT_SECRET = ''
+SOCIAL_AUTH_REDDIT_KEY = os.environ.get("REDDIT_KEY", "nope")
+SOCIAL_AUTH_REDDIT_SECRET = os.environ.get("REDDIT_SECRET", "uhuh")
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
