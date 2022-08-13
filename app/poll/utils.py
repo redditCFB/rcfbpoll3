@@ -206,6 +206,6 @@ def check_for_warnings(ballot):
                 team=entry.team
             ).count()
             if entry_count / ballot_count < 0.1:
-                warnings.append("Team on less than 10% of other ballots: %s" % entry.team.short_name)
+                warnings.append("Team on less than 10% of other ballots: " + entry.team.short_name)
 
     return warnings
