@@ -127,8 +127,7 @@ def get_outlier_analysis(ballot, results):
         teams_ranked.append(entry.team)
 
     omissions = []
-    for rank in range(1, 26):
-        result = results.get(rank=rank)
+    for result in results.filter(rank__lte=25):
         if result.team not in teams_ranked:
             score = max(0, (result.points_per_voter / max(MIN_OUTLIER_FACTOR, result.std_dev)) - SCORE_OFFSET)
             if score > 0:
