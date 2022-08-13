@@ -5,7 +5,7 @@
 		<h4 class="py-3">{{ ballot.poll }}</h4>
         <form id="save-form" action="/ballot/save/{{ ballot.id }}/" method="post">
             {% csrf_token %}
-            <div class="form-floating my-3 col-3">
+            <div class="form-floating my-3 col-6 col-md-3">
                 <select class="form-select" id="poll-type" name="poll-type">
                     <option value="" {% if ballot.poll_type is null %}selected{% endif %}>(unspecified)</option>
                     <option value="1" {% if ballot.poll_type == 1 %}selected{% endif %}>human</option>

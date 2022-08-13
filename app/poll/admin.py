@@ -68,16 +68,8 @@ class ResultSetInline(admin.TabularInline):
     extra = 0
 
 
-class BallotInLine(admin.TabularInline):
-    model = Ballot
-    show_change_link = True
-    readonly_fields = ('is_submitted',)
-    fields = ('user', 'poll_type', 'is_submitted')
-    extra = 0
-
-
 class PollAdmin(admin.ModelAdmin):
-    inlines = [ResultSetInline, BallotInLine]
+    inlines = [ResultSetInline]
     list_display = ('year', 'week', 'open_date', 'publish_date', 'last_week')
     ordering = ['publish_date']
 

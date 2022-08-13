@@ -95,13 +95,17 @@ def get_results_comparison(poll, set_options=None):
             this_comparison['rank_diff_str'] = 'NEW'
             this_comparison['ppv_diff'] = result.points_per_voter
         if baseline:
-            baseline_result = baseline.get(team=result.team)
-            this_comparison['baseline_diff'] = baseline_diff = baseline_result.rank - result.rank
-            this_comparison['baseline_diff_str'] = (
-                '+%d' % baseline_diff if baseline_diff > 0 else
-                '%d' % baseline_diff if baseline_diff < 0 else
-                ''
-            )
+            baseline_result = baseline.filter(team=result.team).first()
+            if baseline_result:
+                this_comparison['baseline_diff'] = baseline_diff = baseline_result.rank - result.rank
+                this_comparison['baseline_diff_str'] = (
+                    '+%d' % baseline_diff if baseline_diff > 0 else
+                    '%d' % baseline_diff if baseline_diff < 0 else
+                    ''
+                )
+            else:
+                this_comparison['baseline_diff'] = 1
+                this_comparison['baseline_diff_str'] = 'NEW'
         else:
             this_comparison['baseline_diff'] = 0
             this_comparison['baseline_diff_str'] = ''
