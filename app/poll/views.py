@@ -1,6 +1,7 @@
 from math import ceil
 from urllib.parse import unquote
 
+from django.contrib.auth import logout as auth_logout
 from django.db.models.functions import Lower
 from django.http import HttpResponseForbidden, HttpResponseBadRequest
 from django.shortcuts import render, redirect
@@ -320,7 +321,7 @@ def my_ballots(request):
     this_user = User.objects.get(username=request.user.username)
     is_provisional = this_user.is_provisional_voter
 
-    if not this_user.is_voter or this_user.is_provisional_voter:
+    if not this_user.is_voter and not this_user.is_provisional_voter:
         app = ProvisionalUserApplication.objects.filter(user=this_user).order_by('-submission_date').first()
         if (
             app and app.status == ProvisionalUserApplication.Status.REJECTED
@@ -385,7 +386,7 @@ def create_ballot(request, poll_id):
 
     this_user = User.objects.get(username=request.user.username)
 
-    if not this_user.is_voter or this_user.is_provisional_voter:
+    if not this_user.is_voter and not this_user.is_provisional_voter:
         return HttpResponseForbidden()
 
     ballot = Ballot.objects.filter(poll=poll, user=this_user).first()
@@ -568,3 +569,8 @@ def submit_ballot(request, ballot_id):
         ballot.save()
 
     return redirect('/my_ballots/')
+
+
+def logout(request):
+    auth_logout(request)
+    return redirect('/')

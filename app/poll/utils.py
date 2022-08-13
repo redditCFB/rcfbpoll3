@@ -201,7 +201,7 @@ def check_for_warnings(ballot):
         for entry in entries:
             entry_count = BallotEntry.objects.filter(
                 ballot__poll=ballot.poll,
-                ballot__submission_date__isnul=False,
+                ballot__submission_date__isnull=False,
                 ballot__user_type=UserRole.Role.VOTER,
                 team=entry.team
             ).count()

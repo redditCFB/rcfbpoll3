@@ -23,5 +23,6 @@ urlpatterns = [
     path('ballot/save/<int:ballot_id>/', views.save_teams, name='save_ballot'),
     path('ballot/save/<int:ballot_id>/reasons/', views.save_reasons, name='save_reasons'),
     path('ballot/validate/<int:ballot_id>/', views.validate_ballot, name='validate_ballot'),
-    path('ballot/submit/<int:ballot_id>/', views.submit_ballot, name='submit_ballot')
+    path('ballot/submit/<int:ballot_id>/', views.submit_ballot, name='submit_ballot'),
+    path('logout/', views.logout, name='logout')
 ]
