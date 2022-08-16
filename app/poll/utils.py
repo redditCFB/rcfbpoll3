@@ -128,7 +128,7 @@ def get_outlier_analysis(ballot, results):
             else:
                 score = min(0, score + SCORE_OFFSET)
         else:
-            score = (26 - entry.rank)/MIN_OUTLIER_FACTOR - SCORE_OFFSET
+            score = (26 - entry.rank) / MIN_OUTLIER_FACTOR - SCORE_OFFSET
         ranks.append((entry.rank, entry.team, score, _get_bg_color(score)))
         total_score += abs(score)
         teams_ranked.append(entry.team)
