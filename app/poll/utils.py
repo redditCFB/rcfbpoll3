@@ -120,12 +120,15 @@ def get_outlier_analysis(ballot, results):
     ranks = []
     teams_ranked = []
     for entry in ballot_entries:
-        result = results.get(team=entry.team)
-        score = (26 - entry.rank - result.points_per_voter) / max(MIN_OUTLIER_FACTOR, result.std_dev)
-        if score > 0:
-            score = max(0, score - SCORE_OFFSET)
+        result = results.filter(team=entry.team).first()
+        if result:
+            score = (26 - entry.rank - result.points_per_voter) / max(MIN_OUTLIER_FACTOR, result.std_dev)
+            if score > 0:
+                score = max(0, score - SCORE_OFFSET)
+            else:
+                score = min(0, score + SCORE_OFFSET)
         else:
-            score = min(0, score + SCORE_OFFSET)
+            score = (26 - entry.rank)/MIN_OUTLIER_FACTOR - SCORE_OFFSET
         ranks.append((entry.rank, entry.team, score, _get_bg_color(score)))
         total_score += abs(score)
         teams_ranked.append(entry.team)
