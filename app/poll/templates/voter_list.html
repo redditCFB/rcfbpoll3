@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <div class="container">
+        <div class="dropdown py-2">
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Jump to another week...
+            </button>
+            <ul class="dropdown-menu" style="overflow-y:auto; max-height:80vh; overflow-x: hidden;">
+                {% for poll in polls %}
+                    <li><a class="dropdown-item" href="/current_voters/?p={{ poll.id }}">{{ poll }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <h4>Main Voters</h4>
+        {% for voter in main_voters %}
+            {{ voter }}<br>
+        {% endfor %}
+        <h4>Provisional Voters</h4>
+        {% for voter in provisional_voters %}
+            {{ voter }}<br>
+        {% endfor %}
+    </div>
+{% endblock %}

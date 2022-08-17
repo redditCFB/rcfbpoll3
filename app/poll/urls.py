@@ -16,6 +16,7 @@ urlpatterns = [
     path('ballot/<int:ballot_id>/', views.ballot_view, name='ballot_view'),
     path('about/', views.about, name='about'),
     path('poll_post/', views.poll_post, name='poll_post'),
+    path('current_voters/', views.current_voters, name='current_voters'),
     path('my_ballots/', views.my_ballots, name='my_ballots'),
     path('apply_for_provisional/', views.apply_for_provisional, name='apply_for_provisional'),
     path('create_ballot/<int:poll_id>/', views.create_ballot, name='create_ballot'),

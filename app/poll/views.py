@@ -574,3 +574,30 @@ def submit_ballot(request, ballot_id):
 def logout(request):
     auth_logout(request)
     return redirect('/')
+
+
+def current_voters(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden()
+
+    p = request.GET.get('p', None)
+
+    polls = Poll.objects.filter(close_date__gt=timezone.now())
+
+    main_voters = UserRole.objects.filter(role=UserRole.Role.VOTER, end_date__isnull=True)
+    provisional_voters = UserRole.objects.filter(role=UserRole.Role.PROVISIONAL, end_date__isnull=True)
+
+    if p:
+        this_poll = Poll.objects.get(id=p)
+        voted = Ballot.objects.filter(poll=this_poll, submission_date__isnull=False).values_list('user')
+        main_voters = main_voters.exclude(user__in=voted)
+        provisional_voters = provisional_voters.exclude(user__in=voted)
+
+    main_voters = main_voters.values_list('user__username', flat=True).order_by(Lower('user__username'))
+    provisional_voters = provisional_voters.values_list('user__username', flat=True).order_by(Lower('user__username'))
+
+    return render(request, 'voter_list.html', {
+        'polls': polls,
+        'main_voters': main_voters,
+        'provisional_voters': provisional_voters
+    })
