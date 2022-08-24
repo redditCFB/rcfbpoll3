@@ -1,9 +1,10 @@
 from math import ceil
+import requests
 from urllib.parse import unquote
 
 from django.contrib.auth import logout as auth_logout
 from django.db.models.functions import Lower
-from django.http import HttpResponseForbidden, HttpResponseBadRequest
+from django.http import HttpResponseForbidden, HttpResponseBadRequest, StreamingHttpResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
@@ -604,3 +605,14 @@ def current_voters(request):
         'main_voters': main_voters,
         'provisional_voters': provisional_voters
     })
+
+
+def fcs(request):
+    url = 'https://www.redditcfb.com/fcstop25.txt'
+    response = requests.get(url, stream=True)
+    return StreamingHttpResponse(
+        response.raw,
+        content_type=response.headers.get('content-type'),
+        status=response.status_code,
+        reason=response.reason
+    )
