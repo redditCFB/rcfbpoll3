@@ -13,7 +13,7 @@ from .utils import check_for_errors, check_for_warnings, get_outlier_analysis, g
 
 
 def index(request):
-    most_recent_poll = Poll.objects.filter(close_date__lt=timezone.now()).order_by('-close_date').first()
+    most_recent_poll = Poll.objects.filter(publish_date__lt=timezone.now()).order_by('-close_date').first()
 
     results = get_results_comparison(most_recent_poll)
 
