@@ -7,16 +7,21 @@
             <div class="nav col-2 nav-pills me-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
                 <button class="nav-link {% if page == 'about' %}active{% endif %}" id="v-pills-about-tab" data-bs-toggle="pill" data-bs-target="#v-pills-about" type="button" role="tab" aria-controls="v-pills-about" aria-selected={% if page == 'about' %}"true"{% else %}"false"{% endif %}>About The Poll</button>
                 <button class="nav-link {% if page == 'faq' %}active{% endif %}" id="v-pills-faq-tab" data-bs-toggle="pill" data-bs-target="#v-pills-faq" type="button" role="tab" aria-controls="v-pills-faq" aria-selected={% if page == 'faq' %}"true"{% else %}"false"{% endif %}>FAQ</button>
+                <button class="nav-link {% if page == 'contribute' %}active{% endif %}" id="v-pills-contribute-tab" data-bs-toggle="pill" data-bs-target="#v-pills-contribute" type="button" role="tab" aria-controls="v-pills-contribute" aria-selected={% if page == 'faq' %}"true"{% else %}"false"{% endif %}>How To Contribute</button>
                 <button class="nav-link {% if page == 'voters' %}active{% endif %}" id="v-pills-voters-tab" data-bs-toggle="pill" data-bs-target="#v-pills-voters" type="button" role="tab" aria-controls="v-pills-voters" aria-selected={% if page == 'voters' %}"true"{% else %}"false"{% endif %}>Voter Hall Of Fame</button>
             </div>
             <div class="col tab-content" id="v-pills-tabContent">
                 <div class="tab-pane fade {% if page == 'about' %}show active{% endif %}" id="v-pills-about" role="tabpanel" aria-labelledby="v-pills-about-tab" tabindex="0">
-                    <h4>About The Poll</h4>
+                    <h3>About The Poll</h3>
                     {{ about.text | markdown | safe }}
                 </div>
                 <div class="tab-pane fade {% if page == 'faq' %}show active{% endif %}" id="v-pills-faq" role="tabpanel" aria-labelledby="v-pills-faq-tab" tabindex="0">
-                    <h4>FAQ</h4>
+                    <h3>FAQ</h3>
                     {{ faq.text | markdown | safe }}
+                </div>
+                <div class="tab-pane fade {% if page == 'contribute' %}show active{% endif %}" id="v-pills-contribute" role="tabpanel" aria-labelledby="v-pills-contribute-tab" tabindex="0">
+                    <h3>How To Contribute</h3>
+                    {{ contribute.text | markdown | safe }}
                 </div>
                 <div class="tab-pane fade {% if page == 'voters' %}show active{% endif %}" id="v-pills-voters" role="tabpanel" aria-labelledby="v-pills-voters-tab" tabindex="0">
                     <h2 class="text-center">Voter Hall of Fame</h2>

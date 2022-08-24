@@ -231,6 +231,7 @@ def about(request):
     page = request.GET.get('p', "about")
     about_text = AboutPage.objects.get(page="about")
     faq = AboutPage.objects.get(page="faq")
+    contribute = AboutPage.objects.get(page="contribute")
 
     voter_roles = UserRole.objects.filter(role=1)
     voters = []
@@ -258,6 +259,7 @@ def about(request):
         'page': page,
         'about': about_text,
         'faq': faq,
+        'contribute': contribute,
         'years': years
     })
 
@@ -280,6 +282,7 @@ def poll_post(request):
         'analysis': request.build_absolute_uri('/poll/analysis/%d/' % poll.id),
         'about': request.build_absolute_uri('/about/?p=about'),
         'faq': request.build_absolute_uri('/about/?p=faq'),
+        'contribute': request.build_absolute_uri('/about/?p=contribute'),
         'hall': request.build_absolute_uri('/about/?p=voters'),
     }
 
