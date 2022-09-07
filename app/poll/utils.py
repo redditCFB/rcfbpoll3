@@ -113,32 +113,32 @@ def get_results_comparison(poll, set_options=None):
     return results
 
 
-def get_outlier_analysis(ballot, results):
+def get_outlier_analysis(ballot, results_dict, top25):
     ballot_entries = ballot.get_entries()
 
     total_score = 0
     ranks = []
     teams_ranked = []
     for entry in ballot_entries:
-        result = results.filter(team=entry.team).first()
-        if result:
-            score = (26 - entry.rank - result.points_per_voter) / max(MIN_OUTLIER_FACTOR, result.std_dev)
+        if entry.team_id in results_dict:
+            result = results_dict[entry.team_id]
+            score = (26 - entry.rank - result['ppv']) / max(MIN_OUTLIER_FACTOR, result['std_dev'])
             if score > 0:
                 score = max(0, score - SCORE_OFFSET)
             else:
                 score = min(0, score + SCORE_OFFSET)
         else:
             score = (26 - entry.rank) / MIN_OUTLIER_FACTOR - SCORE_OFFSET
-        ranks.append((entry.rank, entry.team, score, _get_bg_color(score)))
+        ranks.append((entry.rank, entry.team_id, score, _get_bg_color(score)))
         total_score += abs(score)
-        teams_ranked.append(entry.team)
+        teams_ranked.append(entry.team_id)
 
     omissions = []
-    for result in results.filter(rank__lte=25):
-        if result.team not in teams_ranked:
-            score = max(0, (result.points_per_voter / max(MIN_OUTLIER_FACTOR, result.std_dev)) - SCORE_OFFSET)
+    for team_id, result in top25.items():
+        if team_id not in teams_ranked:
+            score = max(0, (result['ppv'] / max(MIN_OUTLIER_FACTOR, result['std_dev'])) - SCORE_OFFSET)
             if score > 0:
-                omissions.append((result.team, score, _get_bg_color(score * -1)))
+                omissions.append((team_id, score, _get_bg_color(score * -1)))
                 total_score += score
 
     return {

@@ -184,8 +184,9 @@ def analysis_view(request, poll_id):
         ballots = ballots.filter(user_type=1)
 
     ballot_analysis = []
+    results_dict, top25 = _prep_result_set_for_analysis(results)
     for ballot in ballots:
-        ballot_analysis.append(get_outlier_analysis(ballot, results))
+        ballot_analysis.append(get_outlier_analysis(ballot, results_dict, top25))
 
     polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
 
@@ -219,7 +220,14 @@ def ballot_view(request, ballot_id):
     entries = BallotEntry.objects.filter(ballot=ballot).order_by('rank')
 
     poll_results = get_result_set(ballot.poll)
-    ballot_analysis = get_outlier_analysis(ballot, poll_results)
+    results_dict, top25 = _prep_result_set_for_analysis(poll_results)
+    ballot_analysis = get_outlier_analysis(ballot, results_dict, top25)
+    ballot_analysis['ranks'] = [
+        (rank[0], Team.objects.get(pk=rank[1]), rank[2], rank[3]) for rank in ballot_analysis['ranks']
+    ]
+    ballot_analysis['omissions'] = [
+        (Team.objects.get(pk=omission[0]), omission[1], omission[2]) for omission in ballot_analysis['omissions']
+    ]
 
     return render(request, 'ballot_view.html', {
         'ballot': ballot,
@@ -605,6 +613,15 @@ def current_voters(request):
         'main_voters': main_voters,
         'provisional_voters': provisional_voters
     })
+
+
+def _prep_result_set_for_analysis(results):
+    results_list = list(results)
+    results_dict = {result.team_id: {
+        'ppv': result.points_per_voter, 'std_dev': result.std_dev, 'rank': result.rank
+    } for result in results_list}
+    top25 = {team_id: result for (team_id, result) in results_dict.items() if result['rank'] <= 25}
+    return results_dict, top25
 
 
 def fcs(request):
