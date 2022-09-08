@@ -80,8 +80,8 @@ def get_results_comparison(poll, set_options=None):
             'std_dev': result.std_dev,
             'votes': result.votes
         }
-        if last_week and last_week.filter(team=result.team).exists():
-            lw_result = last_week.get(team=result.team)
+        lw_result = last_week.filter(team_id=result.team_id).first() if last_week else None
+        if lw_result:
             this_comparison['rank_diff'] = rank_diff = lw_result.rank - result.rank
             this_comparison['rank_diff_str'] = (
                 'NEW' if lw_result.rank > 25 else
@@ -95,7 +95,7 @@ def get_results_comparison(poll, set_options=None):
             this_comparison['rank_diff_str'] = 'NEW'
             this_comparison['ppv_diff'] = result.points_per_voter
         if baseline:
-            baseline_result = baseline.filter(team=result.team).first()
+            baseline_result = baseline.filter(team_id=result.team_id).first()
             if baseline_result:
                 this_comparison['baseline_diff'] = baseline_diff = baseline_result.rank - result.rank
                 this_comparison['baseline_diff_str'] = (

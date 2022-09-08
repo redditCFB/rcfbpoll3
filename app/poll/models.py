@@ -82,6 +82,10 @@ class Poll(models.Model):
 
     class Meta:
         ordering = ('publish_date',)
+        indexes = [
+            models.Index(fields=['close_date']),
+            models.Index(fields=['publish_date'])
+        ]
 
     def __str__(self):
         return '%d %s' % (self.year, self.week)
