@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    <div class="container">
+        <h2>{{ user.username }}</h2>
+        <div class="row">
+            <h4>Primary Affiliation:</h4>
+            {% if user.primary_affiliation %}
+                {% with "images/full60/"|add:user.primary_affiliation.handle|add:".png" as static_img %}
+                <img class="team-logo" src="{% static static_img %}" alt="">
+                {% endwith %}
+                {{ user.primary_affiliation.name }}
+            {% else %}
+                ???
+            {% endif %}
+        </div>
+        <div>
+            <h4>Secondary Affiliations:</h4>
+            {% if secondary_affiliations %}
+                {% for affiliation in secondary_affiliations %}
+                    {% with "images/full60/"|add:affiliation.team.handle|add:".png" as static_img %}
+                    <img class="team-logo" src="{% static static_img %}" alt="">
+                    {% endwith %}
+                    {{ affiliation.team.name }}
+                {% endfor %}
+            {% else %}
+                None specified.
+            {% endif %}
+        </div>
+        <div>
+            <h4>About:</h4>
+        </div>
+        
+        
+	</div>
+{% endblock %}

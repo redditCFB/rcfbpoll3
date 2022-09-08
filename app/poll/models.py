@@ -6,6 +6,8 @@ from django.utils import timezone
 class User(models.Model):
     username = models.CharField(max_length=32)
     primary_affiliation = models.ForeignKey('Team', blank=True, null=True, on_delete=models.SET_NULL)
+    about_me = models.TextField(blank=True)
+    methodology = models.TextField(blank=True)
 
     def __str__(self):
         return self.username

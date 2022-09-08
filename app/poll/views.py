@@ -8,7 +8,7 @@ from django.http import HttpResponseForbidden, HttpResponseBadRequest, Streaming
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
-from .models import AboutPage, Ballot, BallotEntry, Poll, ProvisionalUserApplication, User, UserRole, Team
+from .models import AboutPage, Ballot, BallotEntry, Poll, ProvisionalUserApplication, User, UserRole, Team, UserSecondaryAffiliation
 from .utils import check_for_errors, check_for_warnings, get_outlier_analysis, get_result_set, get_results_comparison
 
 
@@ -613,6 +613,55 @@ def current_voters(request):
         'main_voters': main_voters,
         'provisional_voters': provisional_voters
     })
+
+
+def user_profile(request, user_id):
+    user = User.objects.get(pk=user_id)
+
+    is_this_user = request.user.username == user.username
+
+    secondary_affiliations = UserSecondaryAffiliation.objects.filter(user=user)
+    roles = UserRole.objects.filter(user=user)
+    ballots = Ballot.objects.filter(user=user, submission_date__is_null=False).order_by('-close_date')
+
+    return render(request, 'user_profile.html', {
+        'this_user': user,
+        'is_this_user': is_this_user,
+        'secondary_affiliations': secondary_affiliations,
+        'roles': roles,
+        'ballots': ballots
+    })
+
+
+def edit_profile(request, user_id):
+    user = User.objects.get(pk=user_id)
+
+    if request.user.username != user.username:
+        return HttpResponseForbidden()
+
+    secondary_affiliations = UserSecondaryAffiliation.objects.filter(user=user)
+
+    return render(request, 'edit_profile.html', {
+        'this_user': user,
+        'secondary_affiliations': secondary_affiliations
+    })
+
+
+def submit_profile(request, user_id):
+    user = User.objects.get(pk=user_id)
+
+    if request.user.username != user.username:
+        return HttpResponseForbidden()
+
+    about_me = unquote(request.POST['about-me'])
+    methodology = unquote(request.POST['methodology'])
+    primary = request.POST['primary']
+    secondary = []
+    for i in range(1, 6):
+        secondary.append(request.POST['secondary-%d' % i])
+
+    return redirect('/profile/%d/' % user.id)
+
 
 
 def _prep_result_set_for_analysis(results):
