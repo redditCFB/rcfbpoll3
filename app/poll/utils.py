@@ -2,7 +2,9 @@ from datetime import datetime
 from math import ceil
 import pytz
 
-from .models import Ballot, BallotEntry, ResultSet, UserRole
+from django.utils import timezone
+
+from .models import Ballot, BallotEntry, ResultSet, UserRole, User
 
 MIN_OUTLIER_FACTOR = 1
 SCORE_OFFSET = 0.75
@@ -215,3 +217,14 @@ def check_for_warnings(ballot):
                 warnings.append("Team on less than 10% of other ballots: " + entry.team.short_name)
 
     return warnings
+
+
+def promote_voters(voter_names):
+    voters = User.objects.filter(username__in=voter_names)
+    UserRole.objects.filter(role=UserRole.Role.PROVISIONAL, user__in=voters).update(end_date=timezone.now())
+    UserRole.objects.bulk_create([
+        UserRole(user=voter, role=UserRole.Role.VOTER, start_date=timezone.now()) for voter in voters
+    ])
+    Ballot.objects.filter(
+        poll__open_date__lt=timezone.now(), poll__close_date__gt=timezone.now(), user__in=voters
+    ).update(user_type=UserRole.Role.VOTER)
