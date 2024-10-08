@@ -20,7 +20,7 @@
                         <tr>
                             <td>{{ entry.rank }}</td>
                             <td>
-                                {% with "images/full60/"|add:entry.team.handle|add:".png" as static_img %}
+                                {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:entry.team.handle|add:".png" as static_img %}
                                     <img class="team-logo" src="{% static static_img %}" alt="">
                                 {% endwith %}
                                 {{ entry.team.short_name }}

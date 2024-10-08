@@ -11,7 +11,7 @@
             <h3>
                 {{ this_poll.year }}
                 {{ this_poll.week }}
-                {% with "images/full60/"|add:this_team.handle|add:".png" as static_img %}
+                {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:this_team.handle|add:".png" as static_img %}
                     <img class="team-logo" src="{% static static_img %}" alt="">
                 {% endwith %}
                 {{ this_team.name }}
@@ -35,7 +35,7 @@
             <ul class="dropdown-menu" style="overflow-y:auto; max-height:60vh; overflow-x: hidden;">
                 {% for team in teams %}
                     <li><a class="dropdown-item" href="/poll/view/{{ this_poll.id }}/team/{{ team.team.id }}/">
-                        {% with "images/full60/"|add:team.team.handle|add:".png" as static_img %}
+                        {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:team.team.handle|add:".png" as static_img %}
                             <img class="team-logo" src="{% static static_img %}" alt="">
                         {% endwith %}
                         {{ team.team.name}}

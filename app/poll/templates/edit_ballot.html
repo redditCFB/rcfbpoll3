@@ -46,7 +46,7 @@
                                 {% for team in teams %}
                                     <div class="col-xxl-4 col-xl-2 col-lg-3 col-md-4 col-6 my-2">
                                         <div class="card text-center">
-                                            {% with "images/full60/"|add:team.handle|add:".png" as static_img %}
+                                            {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:team.handle|add:".png" as static_img %}
                                                 <img class="card-img-top selector-logo mx-auto mt-2" src="{% static static_img %}" alt="">
                                             {% endwith %}
                                             <div class="card-body">
