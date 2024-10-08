@@ -31,7 +31,7 @@
                         <textarea class="form-control" placeholder="" id="rationale-{{ entry.rank }}" name="rationale-{{ entry.rank }}">{{ entry.rationale }}</textarea>
                         <label for="rationale-{{ entry.rank }}">
                             #{{ entry.rank }}
-                            {% with "images/full60/"|add:entry.team.handle|add:".png" as static_img %}
+                            {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:entry.team.handle|add:".png" as static_img %}
                                 <img class="reason-logo me-1" src="{% static static_img %}" alt="">
                             {% endwith %}
                             {{ entry.team.name }}
