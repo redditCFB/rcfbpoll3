@@ -178,6 +178,7 @@ class ResultSet(models.Model):
         entries = BallotEntry.objects.filter(ballot__in=ballots)
         calculated_results = entries.values('team').annotate(
             total_points=models.Count('rank') * 26 - models.Sum('rank'),
+            **{f'rank{n}': models.Count('rank', filter=models.Q(rank=n)) for n in range(1, 26)},
             std_dev=models.StdDev('rank'),
             votes=models.Count('rank'),
             first_place_votes=models.Count('rank', filter=models.Q(rank=1))
@@ -195,7 +196,8 @@ class ResultSet(models.Model):
                     points=team_results['total_points'],
                     points_per_voter=ppv,
                     std_dev=(team_results['std_dev'] * votes + ppv * (ballots.count() - votes)) / ballots.count(),
-                    votes=votes
+                    votes=votes,
+                    ranks=[team_results[f'rank{n}'] for n in range(1, 26)] + [ballots.count() - votes]
                 )
             )
         Result.objects.bulk_create(results)
@@ -240,6 +242,7 @@ class Result(models.Model):
     points_per_voter = models.FloatField()
     std_dev = models.FloatField()
     votes = models.IntegerField()
+    ranks = models.JSONField(null=True)
 
 
 class AboutPage(models.Model):
