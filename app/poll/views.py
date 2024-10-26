@@ -63,11 +63,15 @@ def poll_view(request, poll_id):
             'main': request.GET.get('main', None) is not None,
             'provisional': request.GET.get('provisional', None) is not None,
             'before_ap': request.GET.get('before_ap', None) is not None,
-            'after_ap': request.GET.get('after_ap', None) is not None
+            'after_ap': request.GET.get('after_ap', None) is not None,
+            'show_distribution': request.GET.get('show_distribution', 'off') != 'off',
+            'show_all': request.GET.get('show_all', 'off') != 'off',
         }
         show_filters = True
 
     results = get_results_comparison(poll, options)
+    for result in results:
+        _assign_distribution_classes(result)
 
     display_lists = _get_results_display_lists(poll, results)
 
@@ -76,12 +80,13 @@ def poll_view(request, poll_id):
     return render(request, 'poll_view.html', {
         'this_poll': poll,
         'options': options,
-        'top25': display_lists['top25'],
+        'top25': results if options.get('show_all', False) else display_lists['top25'],
         'others': display_lists['others'],
         'up_movers': display_lists['up_movers'],
         'down_movers': display_lists['down_movers'],
         'dropped': display_lists['dropped'],
         'polls': polls,
+        'rank_list': list(range(1, 26)) + ['NR'],
         'show_filters': show_filters
     })
 
@@ -618,10 +623,21 @@ def current_voters(request):
 def _prep_result_set_for_analysis(results):
     results_list = list(results)
     results_dict = {result.team_id: {
-        'ppv': result.points_per_voter, 'std_dev': result.std_dev, 'rank': result.rank
+        'ppv': result.points_per_voter, 'std_dev': result.std_dev, 'rank': result.rank,
+        'votes': result.ranks
     } for result in results_list}
     top25 = {team_id: result for (team_id, result) in results_dict.items() if result['rank'] <= 25}
     return results_dict, top25
+
+
+def _assign_distribution_classes(result):
+    max_votes = max(result['ranks'])
+    result['classes'] = [('dist-matches' if i+1 == result['rank'] else
+                       'dist-most' if n == max_votes else
+                       'dist-only' if n == 1 else
+                       'dist-none' if n == 0 else None
+                       )for i, n in enumerate(result['ranks'])]
+    result['rank_class'] = zip(result['ranks'], result['classes'])
 
 
 def fcs(request):

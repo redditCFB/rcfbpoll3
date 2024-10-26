@@ -21,6 +21,10 @@ body {
 	margin-left: 5px;
 }
 
+#poll-results td {
+    text-wrap-mode: nowrap;
+}
+
 #submit {
 	padding: 10px;
 }
@@ -85,4 +89,35 @@ body {
     height: 40px;
     width: 60px;
 	horiz-align: center;
+}
+
+.dist-num-cell {
+    text-align: center;
+    vertical-align: middle;
+    font-size: 12px;
+    height: 30px;
+    width: 30px;
+    aspect-ratio: 1;
+}
+
+.dist-matches {
+    background-color: #87FC80 !important;
+}
+
+.dist-most {
+    background-color: #FEFF7B !important;
+}
+
+.dist-only {
+    background-color: #81C9FE !important;
+}
+
+.dist-none {
+    background-color: #FC9598 !important;
+}
+
+@media screen and (max-width: 1410px) {
+    .dist-hidden {
+        display: none;
+    }
 }
