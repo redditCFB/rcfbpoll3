@@ -1,6 +1,8 @@
-django==3.2.5
-markdown==3.3.4
-social-auth-app-django==5.0.0
-psycopg2-binary==2.9.1
-gunicorn==20.1.0
-django-debug-toolbar==3.5.0
+django
+markdown
+psycopg2-binary
+gunicorn
+django-debug-toolbar
+pytz
+django-allauth
+requests

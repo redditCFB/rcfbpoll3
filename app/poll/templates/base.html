@@ -2,6 +2,7 @@
 <html lang="en">
 
 {% load static %}
+{% load socialaccount %}
 
 <link rel="apple-touch-icon" sizes="57x57" href="{% static 'favicon/apple-touch-icon-57x57.png' %}">
 <link rel="apple-touch-icon" sizes="60x60" href="{% static 'favicon/apple-touch-icon-60x60.png' %}">
@@ -109,13 +110,13 @@
 							</a>
 						</li>
                         <li class="nav-item">
-							<a class="nav-link" href="/logout/">
+				<a class="nav-link" href="{% url 'account_logout' %}">
 								Logout
 							</a>
 						</li>
                     {% else %}
                         <li class="nav-item">
-							<a class="nav-link" href="{% url 'social:begin' 'reddit' %}?next={{ request.path }}">
+				<a class="nav-link" href="{% provider_login_url 'reddit' next=request.path %}">
 								Login
 							</a>
 						</li>

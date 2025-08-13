@@ -38,7 +38,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'poll.apps.PollConfig',
-    'social_django',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.reddit',
     'debug_toolbar',
 ]
 
@@ -51,7 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'social_django.middleware.SocialAuthExceptionMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'rcfbpoll.urls'
@@ -67,8 +71,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'social_django.context_processors.backends',
-                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -138,28 +140,34 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 
 AUTHENTICATION_BACKENDS = (
-    'social_core.backends.reddit.RedditOAuth2',
-    'django.contrib.auth.backends.ModelBackend'
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 )
 
-SOCIAL_AUTH_URL_NAMESPACE = 'social'
-SOCIAL_AUTH_PIPELINE = (
-    'social_core.pipeline.social_auth.social_details',
-    'social_core.pipeline.social_auth.social_uid',
-    'social_core.pipeline.social_auth.social_user',
-    'social_core.pipeline.user.get_username',
-    'social_core.pipeline.user.create_user',
-    'social_core.pipeline.social_auth.associate_user',
-    'social_core.pipeline.social_auth.load_extra_data',
-    'social_core.pipeline.user.user_details',
-    'poll.pipeline.check_for_user',
-)
+LOGIN_REDIRECT_URL = '/my_ballots/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 
-SOCIAL_AUTH_REDDIT_KEY = os.environ.get("REDDIT_KEY", "nope")
-SOCIAL_AUTH_REDDIT_SECRET = os.environ.get("REDDIT_SECRET", "uhuh")
+ACCOUNT_EMAIL_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_USERNAME_REQUIRED = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
 
-SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/my_ballots/'
-SOCIAL_AUTH_LOGIN_URL = '/'
+SITE_ID = 1
+SOCIALACCOUNT_PROVIDERS = {
+    'reddit': {
+        'AUTH_PARAMS': {'duration': 'temporary'},
+        'SCOPE': ['identity'],
+        'USER_AGENT': 'django:rcfbpoll:3.0 (by /u/sirgippy)',
+        'APPS': [{
+            'client_id': os.environ.get("REDDIT_KEY", "nope"),
+            'secret': os.environ.get("REDDIT_SECRET", "uhuh"),
+            'key': ''
+        }],
+    }
+}
+
+SOCIALACCOUNT_LOGIN_ON_GET = True
+ACCOUNT_LOGOUT_ON_GET = True
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 

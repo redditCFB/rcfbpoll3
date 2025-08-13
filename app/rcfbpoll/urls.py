@@ -19,6 +19,6 @@ from django.urls import include, path
 urlpatterns = [
     path('', include('poll.urls')),
     path('admin/', admin.site.urls),
-    path('', include('social_django.urls', namespace='social')),
+    path('accounts/', include('allauth.urls')),
     path('__debug__/', include('debug_toolbar.urls'))
 ]
