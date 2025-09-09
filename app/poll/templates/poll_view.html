@@ -22,16 +22,18 @@
             <div class="vr"></div>
             <h4><a class="nav-link" href="/poll/analysis/{{ this_poll.id }}/">Analysis</a></h4>
         </nav>
-        <div class="accordion py-3" id="filterAccordion">
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="headingOne">
-                    <button class="accordion-button{% if not show_filters %} collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                        <h5>Filters</h5>
-                    </button>
-                </h2>
-                <div id="collapseOne" class="accordion-collapse collapse{% if show_filters %} show{% endif %}" aria-labelledby="headingOne">
-                    <div class="accordion-body">
-                        <form action="" method="get">
+        <form id="filter-form" action="" method="get">
+            <input hidden type="checkbox" name="show_distribution" {% if options.show_distribution %} checked {% endif %}>
+            <input hidden type="checkbox" name="show_all" {% if options.show_all %} checked {% endif %}>
+            <div class="accordion py-3" id="filterAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingOne">
+                        <button class="accordion-button{% if not show_filters %} collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                            <h5>Filters</h5>
+                        </button>
+                    </h2>
+                    <div id="collapseOne" class="accordion-collapse collapse{% if show_filters %} show{% endif %}" aria-labelledby="headingOne">
+                        <div class="accordion-body">
                             <div class="py-2 row">
                                 <div class="form-label col-auto">Voter Type:</div>
                                 <div class="col-auto">
@@ -78,11 +80,16 @@
                             <div class="py-2">
                                 <button type="submit" class="btn btn-primary">Update</button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+            {% if options.show_distribution %}
+            <button type="submit" name="show_distribution" value="off" class="btn btn-primary">Hide Distribution</button>
+            {% else %}
+            <button type="submit" name="show_distribution" value="on" class="btn btn-primary">Show Distribution</button>
+            {% endif %}
+        </form>
         <div class="table-responsive py-3">
             <table class="table table-sm table-striped table-bordered" id="poll-results">
                 <tr>
@@ -93,22 +100,27 @@
                     <th class="text-center">Change</th>
                     <th>Team (#1 Votes)</th>
                     <th class="text-center">Points</th>
-                    <th class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Average Points Assigned By Each Voter">
+                    <th class="text-center{% if options.show_distribution %} dist-hidden{% endif %}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Average Points Assigned By Each Voter">
                         PPV
                         <span class="badge text-bg-secondary">?</span>
                     </th>
-                    <th class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Change In PPV Since Last Week">
+                    <th class="text-center{% if options.show_distribution %} dist-hidden{% endif %}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Change In PPV Since Last Week">
                         Δ PPV
                         <span class="badge text-bg-secondary">?</span>
                     </th>
-                    <th class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Standard Deviation - A Measure Of How Much Voters Disagree">
+                    <th class="text-center{% if options.show_distribution %} dist-hidden{% endif %}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Standard Deviation - A Measure Of How Much Voters Disagree">
                         σ
                         <span class="badge text-bg-secondary">?</span>
                     </th>
-                    <th class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Number Of Ballots Cast With The Team">
+                    <th class="text-center{% if options.show_distribution %} dist-hidden{% endif %}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Number Of Ballots Cast With The Team">
                         # Votes
                         <span class="badge text-bg-secondary">?</span>
                     </th>
+                    {% if options.show_distribution %}
+                        {% for n in rank_list %}
+                        <th class="dist-num-cell">{{ n }}</th>
+                        {% endfor %}
+                    {% endif %}
                 </tr>
                 {% for rank in top25 %}
                     <tr>
@@ -141,19 +153,29 @@
                             {% endif %}
                         </td>
                         <td class="text-center" id="team-points">{{ rank.points }}</td>
-                        <td class="text-center">{{ rank.points_per_voter|floatformat:2 }}</td>
+                        <td class="text-center{% if options.show_distribution %} dist-hidden{% endif %}">{{ rank.points_per_voter|floatformat:2 }}</td>
                         {% if rank.ppv_diff > 0 %}
-                            <td class="text-center text-success">+{{ rank.ppv_diff|floatformat:2 }}</td>
+                            <td class="text-center{% if options.show_distribution %} dist-hidden{% endif %} text-success">+{{ rank.ppv_diff|floatformat:2 }}</td>
                         {% elif rank.ppv_diff < 0 %}
-                            <td class="text-center text-danger">{{ rank.ppv_diff|floatformat:2 }}</td>
+                            <td class="text-center{% if options.show_distribution %} dist-hidden{% endif %} text-danger">{{ rank.ppv_diff|floatformat:2 }}</td>
                         {% else %}
-                            <td class="text-center">±{{ rank.ppv_diff|floatformat:2 }}</td>
+                            <td class="text-center{% if options.show_distribution %} dist-hidden{% endif %}">±{{ rank.ppv_diff|floatformat:2 }}</td>
                         {% endif %}
-                        <td class="text-center">{{ rank.std_dev|floatformat:2 }}</td>
-                        <td class="text-center">{{ rank.votes }}</td>
+                        <td class="text-center{% if options.show_distribution %} dist-hidden{% endif %}">{{ rank.std_dev|floatformat:2 }}</td>
+                        <td class="text-center{% if options.show_distribution %} dist-hidden{% endif %}">{{ rank.votes }}</td>
+                        {% if options.show_distribution %}
+                            {% for n, dclass in rank.rank_class %}
+                            <td class="dist-num-cell{% if dclass is not None %} {{ dclass }}{% endif %}">{{ n }}</td>
+                            {% endfor %}
+                        {% endif %}
                     </tr>
                 {% endfor %}
             </table>
+            {% if options.show_all %}
+            <button type="submit" form="filter-form" name="show_all" value="off" class="btn btn-primary">Hide non-Top 25</button>
+            {% else %}
+            <button type="submit" form="filter-form" name="show_all" value="on" class="btn btn-primary">Show All</button>
+            {% endif %}
             {% if dropped and dropped.count > 0 %}
                 <p>
                     <strong>Dropped:</strong>

@@ -80,7 +80,8 @@ def get_results_comparison(poll, set_options=None):
             'points': result.points,
             'points_per_voter': result.points_per_voter,
             'std_dev': result.std_dev,
-            'votes': result.votes
+            'votes': result.votes,
+            'ranks': result.ranks
         }
         lw_result = last_week.filter(team_id=result.team_id).first() if last_week else None
         if lw_result:
