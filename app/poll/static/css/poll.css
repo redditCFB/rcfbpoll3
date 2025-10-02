@@ -131,7 +131,7 @@ body {
 #conference-teams .conference-grid-short {
   display: grid !important;
   grid-auto-flow: column;
-  grid-auto-columns: var(--shortrow-card-w, 220px); /* fallback 220px */
+  grid-auto-columns: var(--shortrow-card-w, 180px);
   justify-content: center;
   gap: var(--bs-gutter-x, 1.5rem);
 }
