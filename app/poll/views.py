@@ -335,9 +335,12 @@ def my_ballots(request):
 
     if not this_user.is_voter and not this_user.is_provisional_voter:
         app = ProvisionalUserApplication.objects.filter(user=this_user).order_by('-submission_date').first()
-        if (
-            app and app.status == ProvisionalUserApplication.Status.REJECTED
-            and (timezone.now() - app.submission_date).days > 180
+        if app and (
+            app.status == ProvisionalUserApplication.Status.ACCEPTED
+            or (
+                app.status == ProvisionalUserApplication.Status.REJECTED
+                and (timezone.now() - app.submission_date).days > 180
+            )
         ):
             app = None
         return render(request, 'not_a_voter.html', {
@@ -378,8 +381,11 @@ def apply_for_provisional(request):
 
     app = ProvisionalUserApplication.objects.filter(user=this_user).order_by('-submission_date').first()
     if app and (
-            app.status != ProvisionalUserApplication.Status.REJECTED
-            or (timezone.now() - app.submission_date).days <= 180
+        app.status == ProvisionalUserApplication.Status.OPEN
+        or (
+            app.status == ProvisionalUserApplication.Status.REJECTED
+            and (timezone.now() - app.submission_date).days <= 180
+        )
     ):
         return redirect('/my_ballots/')
 
