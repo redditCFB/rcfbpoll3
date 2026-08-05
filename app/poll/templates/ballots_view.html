@@ -31,6 +31,10 @@
                 <a class="btn btn-secondary" role="button" href="/poll/ballots/{{ this_poll.id }}/1/">Show Main Ballots</a>
             {% endif %}
         </div>
+        <div class="btn-group my-3" role="group" aria-label="Download ballots">
+            <a class="btn btn-outline-secondary" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/export.csv">Download CSV</a>
+            <a class="btn btn-outline-secondary" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/export.json">Download JSON</a>
+        </div>
         <div class="py-2">
             <table class="table table-sm table-striped">
                 <tr>
