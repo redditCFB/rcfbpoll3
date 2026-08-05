@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static team_logo %}
 {% block content %}
     <div class="container">
         <div class="row">
@@ -20,9 +20,7 @@
                         <tr>
                             <td>{{ entry.rank }}</td>
                             <td>
-                                {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:entry.team.handle|add:".png" as static_img %}
-                                    <img class="team-logo" src="{{ static_img }}" alt="">
-                                {% endwith %}
+                                <img class="team-logo" src="{% team_logo_url entry.team.handle %}" alt="">
                                 {{ entry.team.short_name }}
                                 </a>
                             </td>

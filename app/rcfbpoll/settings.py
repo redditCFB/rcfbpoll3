@@ -131,6 +131,8 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'static'
 
+TEAM_LOGO_URL_TEMPLATE = os.environ.get('TEAM_LOGO_URL_TEMPLATE', 'https://cdn.redditcfb.com/60x40/cfb/{handle}.png')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 

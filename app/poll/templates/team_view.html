@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static team_logo %}
 {% block content %}
     <div class="container">
         <div class="py-3">
@@ -11,9 +11,7 @@
             <h3>
                 {{ this_poll.year }}
                 {{ this_poll.week }}
-                {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:this_team.handle|add:".png" as static_img %}
-                    <img class="team-logo" src="{{ static_img }}" alt="">
-                {% endwith %}
+                <img class="team-logo" src="{% team_logo_url this_team.handle %}" alt="">
                 {{ this_team.name }}
                 Rankings
             </h3>
@@ -35,9 +33,7 @@
             <ul class="dropdown-menu" style="overflow-y:auto; max-height:60vh; overflow-x: hidden;">
                 {% for team in teams %}
                     <li><a class="dropdown-item" href="/poll/view/{{ this_poll.id }}/team/{{ team.team.id }}/">
-                        {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:team.team.handle|add:".png" as static_img %}
-                            <img class="team-logo" src="{{ static_img }}" alt="">
-                        {% endwith %}
+                        <img class="team-logo" src="{% team_logo_url team.team.handle %}" alt="">
                         {{ team.team.name}}
                     </a></li>
                 {% endfor %}

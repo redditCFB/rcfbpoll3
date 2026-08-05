@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static team_logo %}
 {% block content %}
 {% load tz %}
     <div class="container">
@@ -26,9 +26,7 @@
                                     <td>{{ poll.publish_date }}</td>
                                 {% endlocaltime %}
                                 <td>
-                                    {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:poll.top_team.handle|add:".png" as static_img %}
-                                    <img class="team-logo" src="{{ static_img }}" alt="">
-                                    {% endwith %}
+                                    <img class="team-logo" src="{% team_logo_url poll.top_team.handle %}" alt="">
                                     {{ poll.top_team.short_name }}
                                 </td>
                                 <td><a href="/poll/voters/{{ poll.id }}/">Voters</a></td>

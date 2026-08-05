@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static team_logo %}
 {% block content %}
     <div class="container">
         <div class="row flex-lg-row align-items-center g-5 py-5">
@@ -38,9 +38,7 @@
                                 <td>--</td>
                             {% endif %}
                             <td id="team-name">
-                                {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:rank.team.handle|add:".png" as static_img %}
-                                <img class="team-logo" src="{{ static_img }}" alt="">
-                                {% endwith %}
+                                <img class="team-logo" src="{% team_logo_url rank.team.handle %}" alt="">
                                 {{ rank.team.name }}
                                 {% if rank.first_place_votes > 0 %}
                                     ({{ rank.first_place_votes }})
@@ -84,9 +82,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:rank.team.handle|add:".png" as static_img %}
-                                <img class="team-logo" src="{{ static_img }}" alt="">
-                                {% endwith %}
+                                <img class="team-logo" src="{% team_logo_url rank.team.handle %}" alt="">
                                 {{ rank.team.name }}
                             </td>
                             <td style="color: green;">+{{ rank.ppv_diff|floatformat:2 }}</td>
@@ -110,9 +106,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:rank.team.handle|add:".png" as static_img %}
-                                <img class="team-logo" src="{{ static_img }}" alt="">
-                                {% endwith %}
+                                <img class="team-logo" src="{% team_logo_url rank.team.handle %}" alt="">
                                 {{ rank.team.name }}
                             </td>
                             <td style="color: red;">{{ rank.ppv_diff|floatformat:2 }}</td>
