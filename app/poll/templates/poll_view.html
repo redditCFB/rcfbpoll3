@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static team_logo %}
 {% block content %}
     <div class="container">
         <h1 class="py-3">{{ this_poll }}</h1>
@@ -130,9 +130,7 @@
                             <td class="text-center">--</td>
                         {% endif %}
                         <td id="team-name">
-                            {% with "images/full60/"|add:rank.team.handle|add:".png" as static_img %}
-                            <img class="team-logo" src="{% static static_img %}" alt="">
-                            {% endwith %}
+                            <img class="team-logo" src="{% team_logo_url rank.team.handle %}" alt="">
                             <a href="/poll/view/{{ this_poll.id }}/team/{{ rank.team.id }}/">
                                 {{ rank.team.name }}
                             </a>

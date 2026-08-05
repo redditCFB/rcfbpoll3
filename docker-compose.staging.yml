@@ -41,6 +41,17 @@ services:
     env_file:
       - ./.env.staging
     depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.prod
+    command: sh -c 'python manage.py migrate --noinput && python manage.py update_team_logo_handles'
+    env_file:
+      - ./.env.staging
+    depends_on:
       - db
   db:
     image: postgres:17.0-alpine

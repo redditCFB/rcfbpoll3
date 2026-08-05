@@ -1,4 +1,5 @@
 const teams = JSON.parse(document.getElementById('team-data').textContent);
+const teamLogoUrlTemplate = document.getElementById('conference-teams').dataset.teamLogoUrlTemplate;
 
 $(function() {
     $("#ballot").sortable({
@@ -46,7 +47,7 @@ function addTeamToBallot(team_handle) {
             '<div class="card">' +
                 '<div class="card-header">' +
                     '<span class="rank">' + (ballot.children().length + 1) + '</span>' +
-                    '<img class="team-logo me-1" src="/static/images/full60/' + team_handle + '.png" alt="">' +
+                    '<img class="team-logo me-1" src="' + teamLogoUrlTemplate.replace('{handle}', encodeURIComponent(team_handle)) + '" alt="">' +
                     teams[team_handle].name +
                     '<button class="btn btn-close remove-rank float-end" value="' + team_handle + '" aria-label="Close"></button>' +
                 '</div>' +

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static team_logo %}
 {% block content %}
 	<div class="container">
 		<h4 class="py-3">{{ ballot.poll }}</h4>
@@ -31,9 +31,7 @@
                         <textarea class="form-control" placeholder="" id="rationale-{{ entry.rank }}" name="rationale-{{ entry.rank }}">{{ entry.rationale }}</textarea>
                         <label for="rationale-{{ entry.rank }}">
                             #{{ entry.rank }}
-                            {% with "images/full60/"|add:entry.team.handle|add:".png" as static_img %}
-                                <img class="reason-logo me-1" src="{% static static_img %}" alt="">
-                            {% endwith %}
+                            <img class="reason-logo me-1" src="{% team_logo_url entry.team.handle %}" alt="">
                             {{ entry.team.name }}
                         </label>
                     </div>

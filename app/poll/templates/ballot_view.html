@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static team_logo %}
 {% block content %}
 {% load tz %}
     <div class="container">
@@ -49,9 +49,7 @@
                                     <td>{{ entry.rank }}</td>
                                     <td>
                                         <a href="/poll/view/{{ ballot.poll.id }}/team/{{ entry.team.id }}/">
-                                        {% with "images/full60/"|add:entry.team.handle|add:".png" as static_img %}
-                                            <img class="team-logo" src="{% static static_img %}" alt="">
-                                        {% endwith %}
+                                        <img class="team-logo" src="{% team_logo_url entry.team.handle %}" alt="">
                                         {{ entry.team.name }}
                                         </a>
                                     </td>
@@ -76,9 +74,7 @@
                                         <td class="text-center">{{ rank.0 }}</td>
                                         <td>
                                             <a href="/poll/view/{{ ballot.poll.id }}/team/{{ rank.1.id }}/">
-                                            {% with "images/full60/"|add:rank.1.handle|add:".png" as static_img %}
-                                                <img class="team-logo" src="{% static static_img %}" alt="">
-                                            {% endwith %}
+                                            <img class="team-logo" src="{% team_logo_url rank.1.handle %}" alt="">
                                             {{ rank.1.name }}
                                             </a>
                                         </td>
@@ -99,9 +95,7 @@
                                         <tr style="background-color: {{ omission.2 }};">
                                             <td>
                                                 <a href="/poll/view/{{ ballot.poll.id }}/team/{{ omission.0.id }}/">
-                                                {% with "images/full60/"|add:omission.0.handle|add:".png" as static_img %}
-                                                    <img class="team-logo" src="{% static static_img %}" alt="">
-                                                {% endwith %}
+                                                <img class="team-logo" src="{% team_logo_url omission.0.handle %}" alt="">
                                                 {{ omission.0.name }}
                                                 </a>
                                             </td>
