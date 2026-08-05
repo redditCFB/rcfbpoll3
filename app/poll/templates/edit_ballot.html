@@ -79,3 +79,19 @@
         <script>addTeamToBallot("{{ entry.team.handle }}");</script>
     {% endfor %}
 {% endblock %}
+<script>
+(function () {
+  function setShortRowWidth() {
+    const ref = document.querySelector(
+      '#conference-teams .row.justify-content-center:not(.conference-grid-short) [class*="col-"]'
+    );
+    if (!ref) return;
+    const w = Math.round(ref.getBoundingClientRect().width);
+    document.querySelectorAll('#conference-teams .conference-grid-short')
+      .forEach(r => r.style.setProperty('--shortrow-card-w', w + 'px'));
+  }
+  // Run on load and resize
+  window.addEventListener('load', setShortRowWidth);
+  window.addEventListener('resize', setShortRowWidth);
+})();
+</script>

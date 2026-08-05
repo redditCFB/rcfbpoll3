@@ -86,3 +86,65 @@ body {
     width: 60px;
 	horiz-align: center;
 }
+
+#conference-teams .team-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: #fff;
+  transition: transform .1s ease, box-shadow .15s ease;
+}
+
+#conference-teams .team-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.12);
+}
+
+#conference-teams .team-card .selector-logo {
+  display: block;
+  margin: 8px auto 0;
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+#conference-teams .team-card .card-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#conference-teams .team-card .team-card__name {
+  font-weight: 600;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(1.2em * 2);
+  margin-bottom: .75rem;
+}
+
+#conference-teams .conference-grid-short {
+  display: grid !important;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--shortrow-card-w, 180px);
+  justify-content: center;
+  gap: var(--bs-gutter-x, 1.5rem);
+}
+
+#conference-teams .conference-grid-short > [class*="col-"] {
+  width: auto !important;
+  flex: initial !important;
+  padding-left: 0;
+  padding-right: 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#conference-teams .conference-grid-short .team-card {
+  max-width: var(--shortrow-card-w, 220px);
+}
