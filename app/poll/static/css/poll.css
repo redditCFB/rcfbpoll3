@@ -86,3 +86,7 @@ body {
     width: 60px;
 	horiz-align: center;
 }
+
+#conference-teams {
+    min-width: 0;
+}

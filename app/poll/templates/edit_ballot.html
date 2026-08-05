@@ -33,13 +33,13 @@
         <div class="row flex-lg-row py-3 justify-content-center">
             <p>Current Teams Selected: <span id="current-teams">0</span>/25</p>
             <div id="alertPlaceholder"></div>
-			<div class="col-xl-12 col-xxl-6 d-flex align-items-start">
+			<div class="col-12 col-xl-12 col-xxl-6 d-flex align-items-start">
                 <div class="nav flex-column nav-pills me-3" id="conference-tabs" role="tablist" aria-orientation="vertical">
                     {% for conference in team_groups %}
                         <button class="nav-link" id="{{ conference }}-tab" data-bs-toggle="pill" data-bs-target="#{{ conference }}" type="button" role="tab" aria-controls="{{ conference }}" aria-selected="false">{{ conference }}</button>
                     {% endfor %}
                 </div>
-                <div class="tab-content" id="conference-teams" data-team-logo-url-template="{% team_logo_url '{handle}' %}">
+                <div class="tab-content flex-grow-1" id="conference-teams" data-team-logo-url-template="{% team_logo_url '{handle}' %}">
                     {% for conference, teams in team_groups.items %}
                         <div class="tab-pane fade" id="{{ conference }}" role="tabpanel" aria-labelledby="{{ conference }}-tab" tabindex="0">
                             <div class="row justify-content-center">

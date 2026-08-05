@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import views
 
@@ -26,5 +27,5 @@ urlpatterns = [
     path('ballot/validate/<int:ballot_id>/', views.validate_ballot, name='validate_ballot'),
     path('ballot/submit/<int:ballot_id>/', views.submit_ballot, name='submit_ballot'),
     path('fcs/', views.fcs, name='fcs'),
-    path('logout/', views.logout, name='logout')
+    path('logout/', RedirectView.as_view(pattern_name='account_logout', permanent=False))
 ]
