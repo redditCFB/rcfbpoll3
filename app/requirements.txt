@@ -1,4 +1,4 @@
-django
+django>=4.2.16,<5.0
 markdown
 psycopg2-binary
 gunicorn
