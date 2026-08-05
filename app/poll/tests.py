@@ -189,7 +189,8 @@ class BallotExportTests(TransactionTestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["username"], "exporter")
         self.assertEqual(rows[0]["team_handle"], "ecu")
-        self.assertEqual(rows[0]["overall_rationale"], "'=formula-like text")
+        self.assertNotIn("overall_rationale", rows[0])
+        self.assertNotIn("rationale", rows[0])
 
     def test_json_export_groups_entries_by_ballot(self):
         response = self.client.get(f"/poll/ballots/{self.poll.id}/1/export.json")

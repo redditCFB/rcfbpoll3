@@ -210,8 +210,8 @@ def ballots_csv_export(request, poll_id, user_type):
     writer = csv.writer(response)
     writer.writerow([
         "poll_id", "poll_year", "poll_week", "voter_type", "ballot_id", "username",
-        "ballot_type", "submission_date", "overall_rationale", "rank", "team_id",
-        "team_handle", "team_name", "rationale",
+        "ballot_type", "submission_date", "rank", "team_id", "team_handle",
+        "team_name",
     ])
     for ballot in ballots:
         for entry in ballot.ballotentry_set.all():
@@ -224,12 +224,10 @@ def ballots_csv_export(request, poll_id, user_type):
                 _csv_cell(ballot.user.username),
                 _csv_cell(ballot.get_poll_type_display() or ""),
                 ballot.submission_date.isoformat(),
-                _csv_cell(ballot.overall_rationale),
                 entry.rank,
                 entry.team_id,
                 _csv_cell(entry.team.handle),
                 _csv_cell(entry.team.name),
-                _csv_cell(entry.rationale),
             ])
     return response
 
