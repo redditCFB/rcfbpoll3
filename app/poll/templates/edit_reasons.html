@@ -32,7 +32,7 @@
                         <label for="rationale-{{ entry.rank }}">
                             #{{ entry.rank }}
                             {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:entry.team.handle|add:".png" as static_img %}
-                                <img class="reason-logo me-1" src="{% static static_img %}" alt="">
+                                <img class="reason-logo me-1" src="{{ static_img }}" alt="">
                             {% endwith %}
                             {{ entry.team.name }}
                         </label>

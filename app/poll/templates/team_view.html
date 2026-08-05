@@ -12,7 +12,7 @@
                 {{ this_poll.year }}
                 {{ this_poll.week }}
                 {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:this_team.handle|add:".png" as static_img %}
-                    <img class="team-logo" src="{% static static_img %}" alt="">
+                    <img class="team-logo" src="{{ static_img }}" alt="">
                 {% endwith %}
                 {{ this_team.name }}
                 Rankings
@@ -36,7 +36,7 @@
                 {% for team in teams %}
                     <li><a class="dropdown-item" href="/poll/view/{{ this_poll.id }}/team/{{ team.team.id }}/">
                         {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:team.team.handle|add:".png" as static_img %}
-                            <img class="team-logo" src="{% static static_img %}" alt="">
+                            <img class="team-logo" src="{{ static_img }}" alt="">
                         {% endwith %}
                         {{ team.team.name}}
                     </a></li>

@@ -39,7 +39,7 @@
                             {% endif %}
                             <td id="team-name">
                                 {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:rank.team.handle|add:".png" as static_img %}
-                                <img class="team-logo" src="{% static static_img %}" alt="">
+                                <img class="team-logo" src="{{ static_img }}" alt="">
                                 {% endwith %}
                                 {{ rank.team.name }}
                                 {% if rank.first_place_votes > 0 %}
@@ -85,7 +85,7 @@
                             </td>
                             <td>
                                 {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:rank.team.handle|add:".png" as static_img %}
-                                <img class="team-logo" src="{% static static_img %}" alt="">
+                                <img class="team-logo" src="{{ static_img }}" alt="">
                                 {% endwith %}
                                 {{ rank.team.name }}
                             </td>
@@ -111,7 +111,7 @@
                             </td>
                             <td>
                                 {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:rank.team.handle|add:".png" as static_img %}
-                                <img class="team-logo" src="{% static static_img %}" alt="">
+                                <img class="team-logo" src="{{ static_img }}" alt="">
                                 {% endwith %}
                                 {{ rank.team.name }}
                             </td>

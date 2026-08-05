@@ -49,7 +49,7 @@
                         {% for entry in entries %}
                             <td>
                                 {% with "https://cdn.redditcfb.com/60x40/cfb/"|add:entry.team.handle|add:".png" as static_img %}
-                                    <img class="team-logo" src="{% static static_img %}" alt="">
+                                    <img class="team-logo" src="{{ static_img }}" alt="">
                                 {% endwith %}
                                 <a href="/poll/view/{{ this_poll.id }}/team/{{ entry.team.id }}/">
                                     {{ entry.team.short_name }}
