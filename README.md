@@ -22,6 +22,19 @@ authentication accounts, sessions, social-login data, admin logs, provisional
 applications, and derived result caches. It is a release asset rather than a
 regular Git object so clones and Git history remain small.
 
+### Local admin
+
+The fixture includes a local-only Django administrator:
+
+```text
+Username: localadmin
+Password: RcfbPollLocal2026!
+```
+
+This password is intentionally public and predictable because the fixture is
+public. Use the account only in a local development container; never reuse
+these credentials or expose that container as a real deployment.
+
 ### Resetting local data
 
 To discard local changes and restore a fresh fixture:
