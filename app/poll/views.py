@@ -1,12 +1,16 @@
+import csv
+import json
 from math import ceil
 import requests
 from urllib.parse import unquote
 
 from django.contrib.auth import logout as auth_logout
+from django.db.models import Prefetch
 from django.db.models.functions import Lower
-from django.http import HttpResponseForbidden, HttpResponseBadRequest, StreamingHttpResponse
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseBadRequest, StreamingHttpResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
+from django.utils.text import slugify
 
 from .models import AboutPage, Ballot, BallotEntry, Poll, ProvisionalUserApplication, User, UserRole, Team
 from .utils import check_for_errors, check_for_warnings, get_outlier_analysis, get_result_set, get_results_comparison
@@ -167,6 +171,112 @@ def ballots_view(request, poll_id, user_type):
         'next_page': page + 1 if page < ceil(ballot_count / 5) else None,
         'pages': range(1, ceil(ballot_count / 5) + 1)
     })
+
+
+def _export_ballots(request, poll_id, user_type):
+    this_poll = Poll.objects.get(pk=poll_id)
+    if not this_poll.is_published and not request.user.is_staff:
+        return None, HttpResponseForbidden()
+
+    ballots = Ballot.objects.filter(
+        poll=this_poll, user_type=user_type, submission_date__isnull=False
+    ).select_related("user").prefetch_related(
+        Prefetch(
+            "ballotentry_set",
+            queryset=BallotEntry.objects.select_related("team").order_by("rank"),
+        )
+    ).order_by(Lower("user__username"))
+    return (this_poll, ballots), None
+
+
+def _export_filename(this_poll, user_type, extension):
+    voter_type = "main" if user_type == UserRole.Role.VOTER else "provisional"
+    return f"{slugify(str(this_poll))}-{voter_type}-ballots.{extension}"
+
+
+def _csv_cell(value):
+    value = "" if value is None else str(value)
+    return f"'{value}" if value.startswith(("=", "+", "-", "@")) else value
+
+
+def ballots_csv_export(request, poll_id, user_type):
+    export, response = _export_ballots(request, poll_id, user_type)
+    if response:
+        return response
+
+    this_poll, ballots = export
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{_export_filename(this_poll, user_type, "csv")}"'
+    writer = csv.writer(response)
+    writer.writerow([
+        "poll_id", "poll_year", "poll_week", "voter_type", "ballot_id", "username",
+        "ballot_type", "submission_date", "overall_rationale", "rank", "team_id",
+        "team_handle", "team_name", "rationale",
+    ])
+    for ballot in ballots:
+        for entry in ballot.ballotentry_set.all():
+            writer.writerow([
+                this_poll.id,
+                this_poll.year,
+                _csv_cell(this_poll.week),
+                _csv_cell("main" if user_type == UserRole.Role.VOTER else "provisional"),
+                ballot.id,
+                _csv_cell(ballot.user.username),
+                _csv_cell(ballot.get_poll_type_display() or ""),
+                ballot.submission_date.isoformat(),
+                _csv_cell(ballot.overall_rationale),
+                entry.rank,
+                entry.team_id,
+                _csv_cell(entry.team.handle),
+                _csv_cell(entry.team.name),
+                _csv_cell(entry.rationale),
+            ])
+    return response
+
+
+def ballots_json_export(request, poll_id, user_type):
+    export, response = _export_ballots(request, poll_id, user_type)
+    if response:
+        return response
+
+    this_poll, ballots = export
+    voter_type = "main" if user_type == UserRole.Role.VOTER else "provisional"
+    payload = {
+        "poll": {
+            "id": this_poll.id,
+            "year": this_poll.year,
+            "week": this_poll.week,
+            "voter_type": voter_type,
+        },
+        "ballots": [
+            {
+                "id": ballot.id,
+                "username": ballot.user.username,
+                "ballot_type": ballot.get_poll_type_display(),
+                "submission_date": ballot.submission_date.isoformat(),
+                "overall_rationale": ballot.overall_rationale,
+                "entries": [
+                    {
+                        "rank": entry.rank,
+                        "team": {
+                            "id": entry.team_id,
+                            "handle": entry.team.handle,
+                            "name": entry.team.name,
+                        },
+                        "rationale": entry.rationale,
+                    }
+                    for entry in ballot.ballotentry_set.all()
+                ],
+            }
+            for ballot in ballots
+        ],
+    }
+    response = HttpResponse(
+        json.dumps(payload, indent=2),
+        content_type="application/json; charset=utf-8",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{_export_filename(this_poll, user_type, "json")}"'
+    return response
 
 
 def analysis_view(request, poll_id):

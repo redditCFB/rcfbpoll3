@@ -1,5 +1,7 @@
+import csv
 from datetime import timedelta
 from io import StringIO
+import json
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -10,7 +12,7 @@ from django.test import SimpleTestCase, TransactionTestCase
 from django.test.utils import override_settings
 from django.utils import timezone
 
-from poll.models import ProvisionalUserApplication, Team, User, UserRole
+from poll.models import Ballot, BallotEntry, Poll, ProvisionalUserApplication, Team, User, UserRole
 from poll.management.commands.update_team_logo_handles import TEAM_HANDLE_RENAMES
 
 
@@ -126,3 +128,81 @@ class TeamHandleMigrationTests(TransactionTestCase):
         target_team.refresh_from_db()
         self.assertEqual(legacy_team.handle, "eastcarolina")
         self.assertEqual(target_team.handle, "ecu")
+
+
+class BallotExportTests(TransactionTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        with connection.schema_editor() as schema_editor:
+            for model in (Team, User, Poll, Ballot, BallotEntry):
+                schema_editor.create_model(model)
+
+    @classmethod
+    def tearDownClass(cls):
+        with connection.schema_editor() as schema_editor:
+            for model in (BallotEntry, Ballot, Poll, User, Team):
+                schema_editor.delete_model(model)
+        super().tearDownClass()
+
+    def setUp(self):
+        now = timezone.now()
+        self.poll = Poll.objects.create(
+            year=2026,
+            week="Preseason",
+            open_date=now - timedelta(days=21),
+            close_date=now - timedelta(days=14),
+            publish_date=now - timedelta(days=7),
+            ap_date=now - timedelta(days=7),
+        )
+        self.user = User.objects.create(username="exporter")
+        self.team = Team.objects.create(
+            handle="ecu",
+            name="ECU Pirates",
+            conference="American",
+            division="FBS",
+            use_for_ballot=True,
+            short_name="ECU",
+        )
+        self.ballot = Ballot.objects.create(
+            user=self.user,
+            poll=self.poll,
+            submission_date=now - timedelta(days=8),
+            poll_type=Ballot.BallotType.HUMAN,
+            user_type=UserRole.Role.VOTER,
+            overall_rationale="=formula-like text",
+        )
+        BallotEntry.objects.create(
+            ballot=self.ballot,
+            team=self.team,
+            rank=1,
+            rationale="Top choice",
+        )
+
+    def test_csv_export_contains_all_ballot_entries(self):
+        response = self.client.get(f"/poll/ballots/{self.poll.id}/1/export.csv")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertIn("attachment;", response["Content-Disposition"])
+        rows = list(csv.DictReader(response.content.decode().splitlines()))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["username"], "exporter")
+        self.assertEqual(rows[0]["team_handle"], "ecu")
+        self.assertEqual(rows[0]["overall_rationale"], "'=formula-like text")
+
+    def test_json_export_groups_entries_by_ballot(self):
+        response = self.client.get(f"/poll/ballots/{self.poll.id}/1/export.json")
+
+        self.assertEqual(response.status_code, 200)
+        payload = json.loads(response.content)
+        self.assertEqual(payload["poll"]["voter_type"], "main")
+        self.assertEqual(payload["ballots"][0]["username"], "exporter")
+        self.assertEqual(payload["ballots"][0]["entries"][0]["team"]["handle"], "ecu")
+
+    def test_exports_hide_unpublished_polls_from_anonymous_users(self):
+        self.poll.publish_date = timezone.now() + timedelta(days=1)
+        self.poll.save(update_fields=["publish_date"])
+
+        self.assertEqual(self.client.get(f"/poll/ballots/{self.poll.id}/1/export.csv").status_code, 403)
+        self.assertEqual(self.client.get(f"/poll/ballots/{self.poll.id}/1/export.json").status_code, 403)
