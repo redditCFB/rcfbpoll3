@@ -164,7 +164,8 @@ def _load_logo(handle):
 def _paste_logo(canvas, handle, box, border=GREEN):
     x, y, width, height = box
     draw = ImageDraw.Draw(canvas)
-    draw.ellipse((x, y, x + width, y + height), fill=WHITE, outline=border, width=3)
+    radius = min(20, width // 4, height // 4)
+    draw.rounded_rectangle((x, y, x + width, y + height), radius=radius, fill=WHITE, outline=border, width=3)
     logo = _load_logo(handle)
     if logo:
         fitted = ImageOps.contain(logo, (width - 18, height - 18))
@@ -190,47 +191,43 @@ def _load_site_logo():
 def _pill(draw, x, y, value, fill, text_fill=WHITE, width=None, size=13):
     value = str(value)
     width = width or max(42, draw.textbbox((0, 0), value, font=_font(size, True))[2] + 20)
-    draw.rounded_rectangle((x, y, x + width, y + 26), radius=13, fill=fill)
-    _text(draw, (x + width / 2, y + 13), value, size=size, bold=True, fill=text_fill, anchor="mm")
+    draw.rounded_rectangle((x, y, x + width, y + 30), radius=7, fill=fill)
+    _text(draw, (x + width / 2, y + 15), value, size=size, bold=True, fill=text_fill, anchor="mm")
 
 
-def _draw_rank_movement(draw, result, center_x, y, size=17):
+def _draw_rank_movement(draw, result, x, y, size=25):
     change = result.get("rank_diff", 0)
     rank_text = result.get("rank_diff_str", "--")
     color = GREEN if change > 0 else CORAL if change < 0 else MUTED
     if rank_text == "NEW":
-        _text(draw, (center_x, y), "NEW", size=size, bold=True, fill=GOLD, anchor="mm")
+        _text(draw, (x, y), "NEW", size=size - 3, bold=True, fill=GOLD, anchor="lm")
         return
     if change == 0:
-        draw.line((center_x - 12, y, center_x + 12, y), fill=MUTED, width=max(2, size // 6))
+        _text(draw, (x, y), "—", size=size, bold=True, fill=MUTED, anchor="lm")
         return
     direction = -1 if change > 0 else 1
     draw.polygon(
-        ((center_x - 19, y + direction * 8), (center_x, y - direction * 10), (center_x + 19, y + direction * 8)),
+        ((x, y + direction * 6), (x + 12, y - direction * 7), (x + 24, y + direction * 6)),
         fill=color,
     )
-    _text(draw, (center_x, y + 22), str(abs(change)), size=size - 1, bold=True, fill=color, anchor="mm")
+    _text(draw, (x + 32, y), str(abs(change)), size=size, bold=True, fill=color, anchor="lm")
 
 
 def _draw_top_team(canvas, draw, result, center_x, top_y, logo_size, name_size, rank_size):
     _text(draw, (center_x, top_y - 18), f'#{result["rank"]}', size=rank_size, bold=True, fill=GOLD, anchor="ms")
     _paste_logo(canvas, result["team"].handle, (center_x - logo_size // 2, top_y, logo_size, logo_size), border=GOLD if result["rank"] == 1 else GREEN)
-    _draw_fitted(draw, (center_x, top_y + logo_size + 18), _team_name(result["team"]), 230, size=name_size, min_size=12, bold=True, anchor="ms", fill=WHITE)
-    _draw_rank_movement(draw, result, center_x, top_y + logo_size + 55, size=18 if logo_size > 120 else 16)
+    _draw_rank_movement(draw, result, center_x + logo_size // 2 + 18, top_y + logo_size // 2, size=27 if logo_size > 150 else 24)
 
 
-def _draw_named_tier_team(canvas, draw, result, center_x, logo_y, logo_size):
-    _paste_logo(canvas, result["team"].handle, (center_x - logo_size // 2, logo_y, logo_size, logo_size), border=MINT)
-    _text(draw, (center_x, logo_y - 17), f'#{result["rank"]}', size=17, bold=True, fill=MINT, anchor="ms")
-    _draw_fitted(draw, (center_x, logo_y + logo_size + 16), _team_name(result["team"]), 175, size=16, min_size=12, bold=True, anchor="ms", fill=WHITE)
-    _draw_rank_movement(draw, result, center_x, logo_y + logo_size + 48, size=15)
-
-
-def _draw_logo_rank(canvas, draw, result, center_x, logo_y, logo_size, movement=False):
-    _paste_logo(canvas, result["team"].handle, (center_x - logo_size // 2, logo_y, logo_size, logo_size), border=MINT)
-    _text(draw, (center_x, logo_y - 14), f'#{result["rank"]}', size=15, bold=True, fill=MINT, anchor="ms")
+def _draw_team_tile(canvas, draw, result, box, logo_size, show_rank=True, movement=True):
+    x1, y1, x2, y2 = box
+    draw.rounded_rectangle(box, radius=18, fill=WHITE, outline=MINT, width=3)
+    if show_rank:
+        _text(draw, (x1 + 14, y1 + 10), f'#{result["rank"]}', size=20 if logo_size > 90 else 16, bold=True, fill=GREEN)
+    logo_y = y1 + (28 if show_rank else (y2 - y1 - logo_size) // 2)
+    _paste_logo(canvas, result["team"].handle, (x1 + 14, logo_y, logo_size, logo_size), border=GREEN)
     if movement:
-        _draw_rank_movement(draw, result, center_x, logo_y + logo_size + 21, size=14)
+        _draw_rank_movement(draw, result, x1 + 25 + logo_size, y1 + (y2 - y1) // 2, size=27 if logo_size > 90 else 23)
 
 
 def _draw_polarizing(canvas, draw, summary, box):
@@ -239,16 +236,16 @@ def _draw_polarizing(canvas, draw, summary, box):
     _text(draw, (x1 + 28, y1 + 28), "MOST POLARIZING", size=23, bold=True, fill=NAVY)
     _text(draw, (x1 + 28, y1 + 56), "Highest spread inside the Top 25", size=14, fill=MUTED)
     max_std = max((item["std_dev"] for item in summary["polarizing"]), default=1) or 1
-    y = y1 + 92
+    y = y1 + 80
     for item in summary["polarizing"]:
-        _paste_logo(canvas, item["handle"], (x1 + 25, y, 52, 52), border=NAVY)
-        _text(draw, (x1 + 88, y + 3), f'#{item["rank"]}', size=15, bold=True, fill=NAVY)
-        _draw_fitted(draw, (x1 + 125, y + 5), item["name"], 175, size=17, min_size=10, bold=True, fill=INK)
-        _text(draw, (x1 + 88, y + 30), f'spread {item["std_dev"]:.1f}  |  {item["coverage"]:.0%} ranked', size=12, fill=MUTED)
+        _paste_logo(canvas, item["handle"], (x1 + 25, y - 4, 66, 66), border=NAVY)
+        _text(draw, (x1 + 105, y + 2), f'#{item["rank"]}', size=16, bold=True, fill=NAVY)
+        _draw_fitted(draw, (x1 + 145, y + 4), item["short_name"], 175, size=17, min_size=12, bold=True, fill=INK)
+        _text(draw, (x1 + 105, y + 31), f'spread {item["std_dev"]:.1f}  |  {item["coverage"]:.0%} ranked', size=13, fill=MUTED)
         bar_width = int(150 * item["std_dev"] / max_std)
-        draw.rounded_rectangle((x2 - 180, y + 22, x2 - 30, y + 31), radius=5, fill="#d5c8e5")
-        draw.rounded_rectangle((x2 - 180, y + 22, x2 - 180 + bar_width, y + 31), radius=5, fill=NAVY)
-        y += 50
+        draw.rounded_rectangle((x2 - 180, y + 25, x2 - 30, y + 36), radius=5, fill="#d5c8e5")
+        draw.rounded_rectangle((x2 - 180, y + 25, x2 - 180 + bar_width, y + 36), radius=5, fill=NAVY)
+        y += 58
 
 
 def _draw_momentum(canvas, draw, summary, box):
@@ -263,18 +260,18 @@ def _draw_momentum(canvas, draw, summary, box):
         y = y1 + 90 + index * 65
         if not result:
             continue
-        _paste_logo(canvas, result["team"].handle, (x1 + 25, y, 52, 52), border=color)
-        _text(draw, (x1 + 90, y + 1), label, size=12, bold=True, fill=color)
-        _draw_fitted(draw, (x1 + 90, y + 20), result["team"].name, 190, size=17, min_size=10, bold=True, fill=INK)
-        _text(draw, (x2 - 35, y + 11), f'{sign}{abs(result["ppv_diff"]):.2f}', size=22, bold=True, fill=color, anchor="ra")
-        _text(draw, (x2 - 35, y + 38), f'PPV  |  rank {result["rank_diff_str"]}', size=12, fill=MUTED, anchor="ra")
+        _paste_logo(canvas, result["team"].handle, (x1 + 25, y - 5, 66, 66), border=color)
+        _text(draw, (x1 + 105, y + 1), label, size=13, bold=True, fill=color)
+        _draw_fitted(draw, (x1 + 105, y + 22), _team_name(result["team"]), 190, size=18, min_size=13, bold=True, fill=INK)
+        _text(draw, (x2 - 35, y + 11), f'{sign}{abs(result["ppv_diff"]):.2f}', size=23, bold=True, fill=color, anchor="ra")
+        _text(draw, (x2 - 35, y + 40), f'PPV  |  rank {result["rank_diff_str"]}', size=13, fill=MUTED, anchor="ra")
     dropped = summary["dropped"]
     if dropped:
-        _text(draw, (x1 + 28, y2 - 29), "DROPPED", size=11, bold=True, fill=MUTED)
-        x = x1 + 105
+        _text(draw, (x1 + 28, y2 - 31), "DROPPED", size=13, bold=True, fill=MUTED)
+        x = x1 + 115
         for item in dropped:
-            _paste_logo(canvas, item["handle"], (x, y2 - 43, 28, 28), border=CORAL)
-            x += 38
+            _paste_logo(canvas, item["handle"], (x, y2 - 52, 46, 46), border=CORAL)
+            x += 58
 
 
 def _draw_voter_signal(canvas, draw, summary, box):
@@ -296,43 +293,45 @@ def render_post_summary(poll):
     summary = build_post_summary(poll)
     canvas = Image.new("RGBA", (WIDTH, HEIGHT), PAPER)
     draw = ImageDraw.Draw(canvas)
-    draw.rectangle((0, 0, WIDTH, 180), fill=GREEN)
+    draw.rectangle((0, 0, WIDTH, 150), fill=GREEN)
     for offset in (0, 220, 540, 900):
-        draw.ellipse((offset, -110, offset + 260, 150), fill="#169b74")
+        draw.ellipse((offset, -125, offset + 250, 125), fill="#169b74")
 
     site_logo = _load_site_logo()
     if site_logo:
-        fitted = ImageOps.contain(site_logo, (92, 92))
-        canvas.alpha_composite(fitted, (48, 34))
-    _text(draw, (158, 47), "/r/CFB POLL", size=27, bold=True, fill=WHITE)
-    _text(draw, (158, 82), summary["poll"], size=47, bold=True, fill=WHITE)
+        fitted = ImageOps.contain(site_logo, (78, 78))
+        canvas.alpha_composite(fitted, (46, 28))
+    _text(draw, (142, 39), "/r/CFB POLL", size=25, bold=True, fill=WHITE)
+    _text(draw, (142, 70), summary["poll"], size=42, bold=True, fill=WHITE)
 
-    hero = (38, 180, WIDTH - 38, 970)
+    hero = (38, 150, WIDTH - 38, 950)
     draw.rounded_rectangle(hero, radius=34, fill=NAVY)
-    for y in range(230, 955, 80):
+    for y in range(200, 935, 80):
         draw.line((55, y, WIDTH - 55, y), fill="#1b3445", width=2)
-    _text(draw, (70, 214), "THE POLL PYRAMID", size=21, bold=True, fill=MINT)
 
     top25 = summary["top25"]
     if top25:
-        _draw_top_team(canvas, draw, top25[0], WIDTH // 2, 260, 154, 27, 31)
+        _draw_top_team(canvas, draw, top25[0], WIDTH // 2, 218, 180, 27, 31)
     if len(top25) > 1:
-        _draw_top_team(canvas, draw, top25[1], 300, 320, 112, 21, 23)
+        _draw_top_team(canvas, draw, top25[1], 300, 300, 132, 21, 23)
     if len(top25) > 2:
-        _draw_top_team(canvas, draw, top25[2], 900, 320, 112, 21, 23)
+        _draw_top_team(canvas, draw, top25[2], 900, 300, 132, 21, 23)
 
     for index, result in enumerate(top25[3:8]):
-        _draw_named_tier_team(canvas, draw, result, 150 + index * 225, 555, 90)
+        x = 55 + index * 220
+        _draw_team_tile(canvas, draw, result, (x, 475, x + 210, 610), 102, show_rank=True, movement=True)
 
     for index, result in enumerate(top25[8:15]):
-        _draw_logo_rank(canvas, draw, result, 125 + index * 158, 750, 70, movement=True)
+        x = 55 + index * 158
+        _draw_team_tile(canvas, draw, result, (x, 635, x + 148, 750), 84, show_rank=True, movement=True)
 
     for index, result in enumerate(top25[15:25]):
-        _draw_logo_rank(canvas, draw, result, 92 + index * 113, 885, 62, movement=False)
+        x = 50 + index * 111
+        _draw_team_tile(canvas, draw, result, (x, 775, x + 104, 900), 88, show_rank=False, movement=False)
 
-    _draw_polarizing(canvas, draw, summary, (38, 985, 580, 1230))
-    _draw_momentum(canvas, draw, summary, (620, 985, 1162, 1230))
-    _draw_voter_signal(canvas, draw, summary, (38, 1235, 1162, 1460))
+    _draw_polarizing(canvas, draw, summary, (38, 965, 580, 1240))
+    _draw_momentum(canvas, draw, summary, (620, 965, 1162, 1240))
+    _draw_voter_signal(canvas, draw, summary, (38, 1245, 1162, 1460))
 
     _text(draw, (WIDTH // 2, 1480), "For full results, visit poll.redditcfb.com", size=13, fill=MUTED, anchor="mm")
     output = BytesIO()
