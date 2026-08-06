@@ -135,6 +135,7 @@ def build_post_summary(poll):
     return {
         "poll": str(poll),
         "voter_count": len(ballots),
+        "top25": top25,
         "top10": top10,
         "biggest_rise": biggest_rise,
         "biggest_fall": biggest_fall,
@@ -193,36 +194,43 @@ def _pill(draw, x, y, value, fill, text_fill=WHITE, width=None, size=13):
     _text(draw, (x + width / 2, y + 13), value, size=size, bold=True, fill=text_fill, anchor="mm")
 
 
-def _movement_values(result):
-    rank = result.get("rank_diff_str", "--")
-    ppv = result.get("ppv_diff", 0)
-    rank_color = GREEN if result.get("rank_diff", 0) > 0 else CORAL if result.get("rank_diff", 0) < 0 else MUTED
-    rank_text = "NEW" if rank == "NEW" else rank
-    ppv_color = GREEN if ppv > 0 else CORAL if ppv < 0 else MUTED
-    return rank_text, rank_color, f"{ppv:+.2f} PPV", ppv_color
+def _draw_rank_movement(draw, result, center_x, y, size=17):
+    change = result.get("rank_diff", 0)
+    rank_text = result.get("rank_diff_str", "--")
+    color = GREEN if change > 0 else CORAL if change < 0 else MUTED
+    if rank_text == "NEW":
+        _text(draw, (center_x, y), "NEW", size=size, bold=True, fill=GOLD, anchor="mm")
+        return
+    if change == 0:
+        draw.line((center_x - 12, y, center_x + 12, y), fill=MUTED, width=max(2, size // 6))
+        return
+    direction = -1 if change > 0 else 1
+    draw.polygon(
+        ((center_x - 19, y + direction * 8), (center_x, y - direction * 10), (center_x + 19, y + direction * 8)),
+        fill=color,
+    )
+    _text(draw, (center_x, y + 22), str(abs(change)), size=size - 1, bold=True, fill=color, anchor="mm")
 
 
-def _draw_movement_badges(draw, result, x, y, scale=1):
-    rank_text, rank_color, ppv_text, ppv_color = _movement_values(result)
-    _pill(draw, x, y, rank_text, rank_color, width=int(48 * scale), size=max(10, int(12 * scale)))
-    _pill(draw, x + int(54 * scale), y, ppv_text, ppv_color, width=int(80 * scale), size=max(9, int(11 * scale)))
-
-
-def _draw_top_team(canvas, draw, result, center_x, top_y, logo_size, name_size, movement_scale=1):
-    _text(draw, (center_x, top_y - 8), f'#{result["rank"]}', size=30 if logo_size > 120 else 22, bold=True, fill=GOLD, anchor="ms")
+def _draw_top_team(canvas, draw, result, center_x, top_y, logo_size, name_size, rank_size):
+    _text(draw, (center_x, top_y - 18), f'#{result["rank"]}', size=rank_size, bold=True, fill=GOLD, anchor="ms")
     _paste_logo(canvas, result["team"].handle, (center_x - logo_size // 2, top_y, logo_size, logo_size), border=GOLD if result["rank"] == 1 else GREEN)
-    _draw_fitted(draw, (center_x, top_y + logo_size + 16), result["team"].name, 250 if logo_size > 120 else 190, size=name_size, min_size=10, bold=True, anchor="ms", fill=WHITE)
-    _text(draw, (center_x, top_y + logo_size + 42), f'{result["points"]:,} pts', size=14, fill=MINT, anchor="ms")
-    _draw_movement_badges(draw, result, center_x - int(67 * movement_scale), top_y + logo_size + 55, movement_scale)
+    _draw_fitted(draw, (center_x, top_y + logo_size + 18), _team_name(result["team"]), 230, size=name_size, min_size=12, bold=True, anchor="ms", fill=WHITE)
+    _draw_rank_movement(draw, result, center_x, top_y + logo_size + 55, size=18 if logo_size > 120 else 16)
 
 
-def _draw_chase_team(canvas, draw, result, box):
-    x1, y1, x2, y2 = box
-    draw.rounded_rectangle(box, radius=22, fill=WHITE, outline=MINT, width=3)
-    _paste_logo(canvas, result["team"].handle, (x1 + 14, y1 + 18, 70, 70))
-    _text(draw, (x1 + 98, y1 + 28), f'#{result["rank"]}', size=18, bold=True, fill=GREEN)
-    _draw_fitted(draw, (x1 + 98, y1 + 53), result["team"].name, x2 - x1 - 110, size=17, min_size=10, bold=True, fill=INK)
-    _draw_movement_badges(draw, result, x1 + 14, y2 - 38, 0.85)
+def _draw_named_tier_team(canvas, draw, result, center_x, logo_y, logo_size):
+    _paste_logo(canvas, result["team"].handle, (center_x - logo_size // 2, logo_y, logo_size, logo_size), border=MINT)
+    _text(draw, (center_x, logo_y - 17), f'#{result["rank"]}', size=17, bold=True, fill=MINT, anchor="ms")
+    _draw_fitted(draw, (center_x, logo_y + logo_size + 16), _team_name(result["team"]), 175, size=16, min_size=12, bold=True, anchor="ms", fill=WHITE)
+    _draw_rank_movement(draw, result, center_x, logo_y + logo_size + 48, size=15)
+
+
+def _draw_logo_rank(canvas, draw, result, center_x, logo_y, logo_size, movement=False):
+    _paste_logo(canvas, result["team"].handle, (center_x - logo_size // 2, logo_y, logo_size, logo_size), border=MINT)
+    _text(draw, (center_x, logo_y - 14), f'#{result["rank"]}', size=15, bold=True, fill=MINT, anchor="ms")
+    if movement:
+        _draw_rank_movement(draw, result, center_x, logo_y + logo_size + 21, size=14)
 
 
 def _draw_polarizing(canvas, draw, summary, box):
@@ -240,7 +248,7 @@ def _draw_polarizing(canvas, draw, summary, box):
         bar_width = int(150 * item["std_dev"] / max_std)
         draw.rounded_rectangle((x2 - 180, y + 22, x2 - 30, y + 31), radius=5, fill="#d5c8e5")
         draw.rounded_rectangle((x2 - 180, y + 22, x2 - 180 + bar_width, y + 31), radius=5, fill=NAVY)
-        y += 62
+        y += 50
 
 
 def _draw_momentum(canvas, draw, summary, box):
@@ -252,7 +260,7 @@ def _draw_momentum(canvas, draw, summary, box):
         ("SURGE", summary["biggest_ppv_gain"], GREEN, "+"),
         ("SLIP", summary["biggest_ppv_loss"], CORAL, "-"),
     )):
-        y = y1 + 90 + index * 75
+        y = y1 + 90 + index * 65
         if not result:
             continue
         _paste_logo(canvas, result["team"].handle, (x1 + 25, y, 52, 52), border=color)
@@ -278,10 +286,10 @@ def _draw_voter_signal(canvas, draw, summary, box):
     for title, voters, color, x in columns:
         _text(draw, (x, y1 + 92), title, size=17, bold=True, fill=color)
         for index, voter in enumerate(voters):
-            y = y1 + 125 + index * 50
-            draw.rounded_rectangle((x, y, x + 490, y + 36), radius=18, fill="#1b3445")
+            y = y1 + 108 + index * 38
+            draw.rounded_rectangle((x, y, x + 490, y + 30), radius=15, fill="#1b3445")
             _draw_fitted(draw, (x + 16, y + 18), voter["username"], 360, size=16, min_size=10, fill=WHITE, anchor="lm")
-            _pill(draw, x + 406, y + 5, f'{voter["score"]:.1f}', color, width=68, size=12)
+            _pill(draw, x + 406, y + 2, f'{voter["score"]:.1f}', color, width=68, size=12)
 
 
 def render_post_summary(poll):
@@ -299,34 +307,32 @@ def render_post_summary(poll):
     _text(draw, (158, 47), "/r/CFB POLL", size=27, bold=True, fill=WHITE)
     _text(draw, (158, 82), summary["poll"], size=47, bold=True, fill=WHITE)
 
-    hero = (38, 180, WIDTH - 38, 850)
+    hero = (38, 180, WIDTH - 38, 970)
     draw.rounded_rectangle(hero, radius=34, fill=NAVY)
-    for y in range(230, 835, 80):
+    for y in range(230, 955, 80):
         draw.line((55, y, WIDTH - 55, y), fill="#1b3445", width=2)
-    _text(draw, (70, 214), "THE TOP TEN", size=21, bold=True, fill=MINT)
+    _text(draw, (70, 214), "THE POLL PYRAMID", size=21, bold=True, fill=MINT)
 
-    top10 = summary["top10"]
-    if top10:
-        _draw_top_team(canvas, draw, top10[0], WIDTH // 2, 248, 142, 28, 0.95)
-    if len(top10) > 1:
-        _draw_top_team(canvas, draw, top10[1], 300, 298, 104, 21, 0.82)
-    if len(top10) > 2:
-        _draw_top_team(canvas, draw, top10[2], 900, 298, 104, 21, 0.82)
+    top25 = summary["top25"]
+    if top25:
+        _draw_top_team(canvas, draw, top25[0], WIDTH // 2, 260, 154, 27, 31)
+    if len(top25) > 1:
+        _draw_top_team(canvas, draw, top25[1], 300, 320, 112, 21, 23)
+    if len(top25) > 2:
+        _draw_top_team(canvas, draw, top25[2], 900, 320, 112, 21, 23)
 
-    chase = top10[3:10]
-    for row_index, row in enumerate((chase[:4], chase[4:])):
-        tile_width = 250
-        gap = 16
-        row_width = len(row) * tile_width + max(0, len(row) - 1) * gap
-        x = (WIDTH - row_width) // 2
-        y = 510 + row_index * 135
-        for result in row:
-            _draw_chase_team(canvas, draw, result, (x, y, x + tile_width, y + 108))
-            x += tile_width + gap
+    for index, result in enumerate(top25[3:8]):
+        _draw_named_tier_team(canvas, draw, result, 150 + index * 225, 555, 90)
 
-    _draw_polarizing(canvas, draw, summary, (38, 875, 580, 1150))
-    _draw_momentum(canvas, draw, summary, (620, 875, 1162, 1150))
-    _draw_voter_signal(canvas, draw, summary, (38, 1175, 1162, 1460))
+    for index, result in enumerate(top25[8:15]):
+        _draw_logo_rank(canvas, draw, result, 125 + index * 158, 750, 70, movement=True)
+
+    for index, result in enumerate(top25[15:25]):
+        _draw_logo_rank(canvas, draw, result, 92 + index * 113, 885, 62, movement=False)
+
+    _draw_polarizing(canvas, draw, summary, (38, 985, 580, 1230))
+    _draw_momentum(canvas, draw, summary, (620, 985, 1162, 1230))
+    _draw_voter_signal(canvas, draw, summary, (38, 1235, 1162, 1460))
 
     _text(draw, (WIDTH // 2, 1480), "For full results, visit poll.redditcfb.com", size=13, fill=MUTED, anchor="mm")
     output = BytesIO()
