@@ -16,8 +16,6 @@
         </h4>
         Here are the results for the {{ poll }} /r/CFB Poll:<br>
         <br>
-        **POLL SUMMARY:** [View the automated poll summary image]({{ links.summary_image }})<br>
-        <br>
         |Rank|Change|Team (#1 Votes)|Points|<br>
         |:--:|:--:|:--|:--:|<br>
         {% for rank in top25 %}
@@ -39,6 +37,7 @@
         <br><br>
         **POLL SITE**: https://poll.redditcfb.com/
         <br><br>
+        * [Poll Summary Image]({{ links.summary_image }})<br>
         * [Detailed Results]({{ links.results }})<br>
         * [Results w/Provisional Voters]({{ links.provisional }})<br>
         * [THE PEOPLE'S POLL]({{ links.peoples_poll }})<br>

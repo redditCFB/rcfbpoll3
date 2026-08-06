@@ -27,10 +27,9 @@ class PollPostTemplateTests(SimpleTestCase):
             'links': {'summary_image': 'https://poll.example/summary/12.png'},
         }, request)
 
-        self.assertIn(
-            '**POLL SUMMARY:** [View the automated poll summary image](https://poll.example/summary/12.png)<br>',
-            rendered,
-        )
+        summary_link = '* [Poll Summary Image](https://poll.example/summary/12.png)<br>'
+        self.assertIn(summary_link, rendered)
+        self.assertLess(rendered.index(summary_link), rendered.index('* [Detailed Results]'))
         self.assertNotIn('<img src="https://poll.example/summary/12.png"', rendered)
 
     def test_includes_the_peoples_poll_link(self):
