@@ -116,7 +116,17 @@ def get_results_comparison(poll, set_options=None):
 
 
 def get_outlier_analysis(ballot, results_dict, top25):
-    ballot_entries = ballot.get_entries()
+    analysis = _get_outlier_analysis(ballot.get_entries(), results_dict, top25)
+    analysis['ballot'] = ballot
+    return analysis
+
+
+def get_outlier_score(ballot_entries, results_dict, top25):
+    """Return the same outlier score used by the ballot analysis views."""
+    return _get_outlier_analysis(ballot_entries, results_dict, top25)['score']
+
+
+def _get_outlier_analysis(ballot_entries, results_dict, top25):
 
     total_score = 0
     ranks = []
@@ -144,7 +154,6 @@ def get_outlier_analysis(ballot, results_dict, top25):
                 total_score += score
 
     return {
-        'ballot': ballot,
         'ranks': ranks,
         'omissions': omissions,
         'score': total_score

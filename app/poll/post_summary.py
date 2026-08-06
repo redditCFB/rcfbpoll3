@@ -9,7 +9,7 @@ from django.conf import settings
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from .models import Ballot, UserRole
-from .utils import SCORE_OFFSET, MIN_OUTLIER_FACTOR, get_result_set, get_results_comparison
+from .utils import get_outlier_score, get_result_set, get_results_comparison
 
 
 WIDTH = 1200
@@ -59,32 +59,6 @@ def _team_payload(team, **values):
     return payload
 
 
-def _analysis_score(ballot, results_dict, top25):
-    total_score = 0
-    ranked_team_ids = set()
-    for entry in ballot.ballotentry_set.all():
-        result = results_dict.get(entry.team_id)
-        if result:
-            score = (26 - entry.rank - result["ppv"]) / max(
-                MIN_OUTLIER_FACTOR, result["std_dev"]
-            )
-            if score > 0:
-                score = max(0, score - SCORE_OFFSET)
-            else:
-                score = min(0, score + SCORE_OFFSET)
-        else:
-            score = (26 - entry.rank) / MIN_OUTLIER_FACTOR - SCORE_OFFSET
-        total_score += abs(score)
-        ranked_team_ids.add(entry.team_id)
-
-    for team_id, result in top25.items():
-        if team_id not in ranked_team_ids:
-            score = max(0, result["ppv"] / max(MIN_OUTLIER_FACTOR, result["std_dev"]) - SCORE_OFFSET)
-            total_score += score
-
-    return total_score
-
-
 def build_post_summary(poll):
     comparison = list(get_results_comparison(poll))
     result_set = get_result_set(poll)
@@ -117,7 +91,7 @@ def build_post_summary(poll):
         {
             "username": ballot.user.username,
             "ballot_id": ballot.id,
-            "score": _analysis_score(ballot, results_dict, top25_dict),
+            "score": get_outlier_score(ballot.ballotentry_set.all(), results_dict, top25_dict),
         }
         for ballot in ballots
     ]
