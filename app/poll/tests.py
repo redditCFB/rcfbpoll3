@@ -110,7 +110,8 @@ class ProvisionalApplicationNotificationTests(TransactionTestCase):
         reddit_class.return_value.redditor.assert_called_once_with('notification_test_user')
         subject, body = reddit_class.return_value.redditor.return_value.message.call_args.args
         self.assertEqual(subject, 'Your r/CFB Poll provisional voter application was approved')
-        self.assertIn('https://poll.redditcfb.com/', body)
+        self.assertIn('submit provisional ballots', body)
+        self.assertIn('provisional results', body)
 
     @override_settings(
         REDDIT_MESSAGE_CLIENT_ID='client-id',
@@ -128,7 +129,9 @@ class ProvisionalApplicationNotificationTests(TransactionTestCase):
         reddit_class.return_value.redditor.assert_called_once_with('notification_test_user')
         subject, body = reddit_class.return_value.redditor.return_value.message.call_args.args
         self.assertEqual(subject, 'Your r/CFB Poll provisional voter application was not approved')
-        self.assertNotIn('https://poll.redditcfb.com/', body)
+        self.assertIn('Thank you for your interest', body)
+        self.assertIn('u/sirgippy', body)
+        self.assertIn('r/CFB moderators', body)
 
     @patch('poll.notifications.praw.Reddit')
     def test_message_is_skipped_when_bot_credentials_are_not_configured(self, reddit_class):
