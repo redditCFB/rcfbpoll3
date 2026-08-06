@@ -11,6 +11,10 @@ SCORE_OFFSET = 0.75
 
 
 def get_result_set(poll, set_options=None):
+    return get_result_set_record(poll, set_options).results()
+
+
+def get_result_set_record(poll, set_options=None):
     options = {
         'human': True,
         'computer': True,
@@ -36,13 +40,11 @@ def get_result_set(poll, set_options=None):
 
     if result_set:
         if result_set.needs_update():
-            results = result_set.update()
-        else:
-            results = result_set.results()
+            result_set.update()
     else:
-        results = _create_result_set(poll, options)
+        result_set = _create_result_set(poll, options)
 
-    return results
+    return result_set
 
 
 def _create_result_set(poll, options):
@@ -59,7 +61,8 @@ def _create_result_set(poll, options):
         after_ap=options['after_ap']
     )
     result_set.save()
-    return result_set.update()
+    result_set.update()
+    return result_set
 
 
 def get_results_comparison(poll, set_options=None):

@@ -9,7 +9,7 @@ from django.conf import settings
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from .models import Ballot, UserRole
-from .utils import get_outlier_score, get_result_set, get_results_comparison
+from .utils import get_outlier_score, get_result_set, get_result_set_record, get_results_comparison
 
 
 WIDTH = 1200
@@ -242,7 +242,9 @@ def post_summary_path(poll):
 
 def cache_post_summary(poll, refresh=False):
     path = post_summary_path(poll)
-    if path.exists() and not refresh:
+    result_set = get_result_set_record(poll)
+    result_timestamp = result_set.time_calculated.timestamp()
+    if path.exists() and not refresh and path.stat().st_mtime >= result_timestamp:
         return path
 
     path.parent.mkdir(parents=True, exist_ok=True)

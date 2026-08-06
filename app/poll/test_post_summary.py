@@ -10,6 +10,7 @@ from PIL import Image
 
 from poll import views
 from poll.models import Ballot, BallotEntry, Poll, Result, ResultSet, Team, User
+from poll.post_summary import cache_post_summary
 
 
 class PostSummaryImageTests(TransactionTestCase):
@@ -91,8 +92,24 @@ class PostSummaryImageTests(TransactionTestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_cached_image_refreshes_when_results_change(self):
+        with tempfile.TemporaryDirectory() as static_root:
+            with override_settings(STATIC_ROOT=static_root):
+                with patch("poll.post_summary.render_post_summary", side_effect=[b"first", b"second"]) as render:
+                    first = cache_post_summary(self.poll)
+                    second = cache_post_summary(self.poll)
+                    self.assertEqual(first, second)
+                    self.assertEqual(render.call_count, 1)
+
+                    result_set = ResultSet.objects.get(poll=self.poll)
+                    result_set.time_calculated = timezone.now() + timedelta(seconds=1)
+                    result_set.save(update_fields=["time_calculated"])
+                    cache_post_summary(self.poll)
+
+        self.assertEqual(render.call_count, 2)
+
     def _request(self, is_staff):
-        request = RequestFactory().get(f"/poll_post/summary/{self.poll.id}.png")
+        request = RequestFactory().get(f"/poll/summary/{self.poll.id}.png")
         request.user = type(
             "FakeUser",
             (),

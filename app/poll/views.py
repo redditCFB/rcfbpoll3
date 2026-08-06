@@ -389,6 +389,7 @@ def poll_post(request):
     poll = Poll.objects.filter(close_date__lt=timezone.now()).order_by('-close_date').first()
     results = get_results_comparison(poll)
     display_lists = _get_results_display_lists(poll, results)
+    cache_post_summary(poll)
 
     links = {
         'results': request.build_absolute_uri('/poll/view/%d/' % poll.id),
