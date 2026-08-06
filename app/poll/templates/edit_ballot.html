@@ -33,7 +33,7 @@
         <div class="row flex-lg-row py-3 justify-content-center">
             <p>Current Teams Selected: <span id="current-teams">0</span>/25</p>
             <div id="alertPlaceholder"></div>
-			<div class="col-12 col-xl-12 col-xxl-6 d-flex align-items-start">
+			<div class="col-12 col-xl-12 col-xxl-6 d-flex align-items-start" id="team-picker">
                 <div class="nav flex-column nav-pills me-3" id="conference-tabs" role="tablist" aria-orientation="vertical">
                     {% for conference in team_groups %}
                         <button class="nav-link" id="{{ conference }}-tab" data-bs-toggle="pill" data-bs-target="#{{ conference }}" type="button" role="tab" aria-controls="{{ conference }}" aria-selected="false">{{ conference }}</button>
