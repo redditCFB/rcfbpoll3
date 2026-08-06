@@ -51,19 +51,20 @@ or any remote database.
 
 When a staff member accepts or rejects an open provisional-voter application in
 Django admin, the site sends the applicant a Reddit private message from
-`CFB_Referee`. Create a script-type Reddit application while logged in as that
-account. Messaging is disabled until these deployment environment variables are
-set:
+`CFB_Referee`. Create a **web app** at Reddit while logged in as that account,
+then complete Reddit's permanent OAuth code flow as `CFB_Referee` with the
+`privatemessages` scope to obtain a refresh token. Messaging is disabled until
+these deployment environment variables are set:
 
 ```text
 REDDIT_MESSAGE_CLIENT_ID
 REDDIT_MESSAGE_CLIENT_SECRET
-REDDIT_MESSAGE_PASSWORD
+REDDIT_MESSAGE_REFRESH_TOKEN
 ```
 
-Use the client ID and secret from that Reddit application and the password for
-the `CFB_Referee` account. `REDDIT_MESSAGE_USERNAME` defaults to `CFB_Referee`;
-set it only if a different bot account is used. The notifier also supplies a
-default Reddit user agent, which can be overridden with
-`REDDIT_MESSAGE_USER_AGENT` if necessary. Failed deliveries are logged and shown
-as an admin warning, but never reverse the application decision.
+Use the client ID and secret from that Reddit application and store the resulting
+refresh token as a deployment secret. The notifier supplies a default Reddit
+user agent, which can be overridden with `REDDIT_MESSAGE_USER_AGENT` if
+necessary. The refresh token authenticates as the account that completed the
+OAuth flow; no Reddit password is stored by the site. Failed deliveries are
+logged and shown as an admin warning, but never reverse the application decision.

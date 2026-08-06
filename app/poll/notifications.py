@@ -37,7 +37,7 @@ def send_provisional_application_decision_message(application):
     required_settings = (
         settings.REDDIT_MESSAGE_CLIENT_ID,
         settings.REDDIT_MESSAGE_CLIENT_SECRET,
-        settings.REDDIT_MESSAGE_PASSWORD,
+        settings.REDDIT_MESSAGE_REFRESH_TOKEN,
     )
     if not all(required_settings):
         logger.warning('Reddit decision notification skipped because bot credentials are not configured.')
@@ -48,8 +48,7 @@ def send_provisional_application_decision_message(application):
         reddit = praw.Reddit(
             client_id=settings.REDDIT_MESSAGE_CLIENT_ID,
             client_secret=settings.REDDIT_MESSAGE_CLIENT_SECRET,
-            username=settings.REDDIT_MESSAGE_USERNAME,
-            password=settings.REDDIT_MESSAGE_PASSWORD,
+            refresh_token=settings.REDDIT_MESSAGE_REFRESH_TOKEN,
             user_agent=settings.REDDIT_MESSAGE_USER_AGENT,
         )
         reddit.redditor(application.user.username).message(subject, body)

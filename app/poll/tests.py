@@ -96,8 +96,7 @@ class ProvisionalApplicationNotificationTests(TransactionTestCase):
     @override_settings(
         REDDIT_MESSAGE_CLIENT_ID='client-id',
         REDDIT_MESSAGE_CLIENT_SECRET='client-secret',
-        REDDIT_MESSAGE_PASSWORD='password',
-        REDDIT_MESSAGE_USERNAME='CFB_Referee',
+        REDDIT_MESSAGE_REFRESH_TOKEN='refresh-token',
     )
     @patch('poll.notifications.praw.Reddit')
     def test_acceptance_message_is_sent_from_configured_account(self, reddit_class):
@@ -106,7 +105,12 @@ class ProvisionalApplicationNotificationTests(TransactionTestCase):
 
         self.assertTrue(send_provisional_application_decision_message(self.application))
 
-        reddit_class.assert_called_once()
+        reddit_class.assert_called_once_with(
+            client_id='client-id',
+            client_secret='client-secret',
+            refresh_token='refresh-token',
+            user_agent='django:rcfbpoll:3.0 (by /u/CFB_Referee)',
+        )
         reddit_class.return_value.redditor.assert_called_once_with('notification_test_user')
         subject, body = reddit_class.return_value.redditor.return_value.message.call_args.args
         self.assertEqual(subject, 'Your r/CFB Poll provisional voter application was approved')
@@ -116,8 +120,7 @@ class ProvisionalApplicationNotificationTests(TransactionTestCase):
     @override_settings(
         REDDIT_MESSAGE_CLIENT_ID='client-id',
         REDDIT_MESSAGE_CLIENT_SECRET='client-secret',
-        REDDIT_MESSAGE_PASSWORD='password',
-        REDDIT_MESSAGE_USERNAME='CFB_Referee',
+        REDDIT_MESSAGE_REFRESH_TOKEN='refresh-token',
     )
     @patch('poll.notifications.praw.Reddit')
     def test_rejection_message_is_sent_from_configured_account(self, reddit_class):
