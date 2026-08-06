@@ -27,6 +27,7 @@ class PollPostTemplateTests(SimpleTestCase):
             'links': {
                 'results': 'https://poll.example/results',
                 'provisional': 'https://poll.example/peoples-poll',
+                'peoples_poll': 'https://poll.example/peoples-poll?provisional=on',
                 'voters': 'https://poll.example/voters',
                 'ballots': 'https://poll.example/ballots',
                 'analysis': 'https://poll.example/analysis',
@@ -37,4 +38,4 @@ class PollPostTemplateTests(SimpleTestCase):
             },
         }, request)
 
-        self.assertIn('* [THE PEOPLE\'S POLL](https://poll.example/peoples-poll)<br>', rendered)
+        self.assertIn("* [THE PEOPLE'S POLL](https://poll.example/peoples-poll?provisional=on)<br>", rendered)

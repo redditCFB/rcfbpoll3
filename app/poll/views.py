@@ -394,6 +394,9 @@ def poll_post(request):
         'provisional': request.build_absolute_uri(
             '/poll/view/%d/?main=on&provisional=on&human=on&computer=on&hybrid=on&before_ap=on&after_ap=on' % poll.id
         ),
+        'peoples_poll': request.build_absolute_uri(
+            '/poll/view/%d/?provisional=on&human=on&computer=on&hybrid=on&before_ap=on&after_ap=on' % poll.id
+        ),
         'voters': request.build_absolute_uri('/poll/voters/%d/' % poll.id),
         'ballots': request.build_absolute_uri('/poll/ballots/%d/' % poll.id),
         'analysis': request.build_absolute_uri('/poll/analysis/%d/' % poll.id),
