@@ -27,12 +27,14 @@
                 Main Poll Voters
             </h4>
         </div>
-        <div class="py-2" id="main-voters">
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 py-2" id="main-voters">
             {% for ballot in ballots %}
                 {% if ballot.user_type == 1 %}
-                    <a class="{% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.id }}/">
-                        {{ ballot.user.username }}
-                    </a><br>
+                    <div class="col py-1">
+                        <a class="text-break {% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.id }}/">
+                            {{ ballot.user.username }}
+                        </a>
+                    </div>
                 {% endif %}
             {% endfor %}
         </div>
@@ -41,12 +43,14 @@
                 Provisional Poll Voters
             </h4>
         </div>
-        <div class="py-2" id="provisional-voters">
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 py-2" id="provisional-voters">
             {% for ballot in ballots %}
                 {% if ballot.user_type == 2 %}
-                    <div><a class="{% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.id }}/">
-                        {{ ballot.user.username }}
-                    </a></div>
+                    <div class="col py-1">
+                        <a class="text-break {% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.id }}/">
+                            {{ ballot.user.username }}
+                        </a>
+                    </div>
                 {% endif %}
             {% endfor %}
         </div>
@@ -59,10 +63,4 @@
             <span class="fw-normal">Normal</span> = after the AP poll was published<br>
         </div>
     </div>
-    <script>
-        $( function() {
-            $('#main-voters').columnize({columns: 5});
-            $('#provisional-voters').columnize({columns: 5});
-        });
-    </script>
 {% endblock %}
