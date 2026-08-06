@@ -236,7 +236,7 @@ def _draw_team_tile(canvas, draw, result, box, logo_size, show_rank=True, moveme
             rank_x = (logo_x + movement_x + 48) // 2
         else:
             rank_x = logo_x + logo_size // 2
-        _text(draw, (rank_x, y1 + 10), f'#{result["rank"]}', size=20 if logo_size > 90 else 16, bold=True, fill=MINT, anchor="ms")
+        _text(draw, (rank_x, y1 + 10), f'#{result["rank"]}', size=20 if logo_size > 90 else 16, bold=True, fill=GREEN, anchor="ms")
     _paste_logo(canvas, result["team"].handle, (logo_x, logo_y, logo_size, logo_size), border=GREEN, frame=frame)
     if movement:
         _draw_rank_movement(draw, result, logo_x + logo_size + 10, logo_y + logo_size // 2, size=27 if logo_size > 90 else 23)
@@ -315,6 +315,7 @@ def render_post_summary(poll):
         canvas.alpha_composite(fitted, (46, 22))
     _text(draw, (142, 32), "/r/CFB POLL", size=25, bold=True, fill=WHITE)
     _text(draw, (142, 63), summary["poll"], size=42, bold=True, fill=WHITE)
+    _text(draw, (WIDTH - 55, 52), f'{summary["voter_count"]} ballots submitted', size=17, fill="#d9f2e5", anchor="ra")
 
     top25 = summary["top25"]
     if top25:
