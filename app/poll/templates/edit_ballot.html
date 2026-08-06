@@ -17,6 +17,9 @@
             <div class="form-floating my-3">
                 <textarea class="form-control" placeholder="" id="overall-rationale" name="overall-rationale">{{ ballot.overall_rationale }}</textarea>
                 <label for="overall-rationale">Overall Rationale/Methodology</label>
+                {% if previous_rationale %}
+                    <button type="button" class="btn btn-secondary mt-2" id="copy-rationale-button" data-rationale="{{ previous_rationale }}">Copy rationale from last submitted ballot</button>
+                {% endif %}
             </div>
             <label for="page"></label>
             <select class="form-select d-none" id="page" name="page">

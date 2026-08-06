@@ -38,6 +38,9 @@ $(function() {
     $("#validate-button").click(function() {
         saveBallot('validate');
     });
+    $("#copy-rationale-button").click(function() {
+        $("#overall-rationale").val($(this).data("rationale"));
+    });
 });
 
 function addTeamToBallot(team_handle) {
