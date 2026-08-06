@@ -54,7 +54,6 @@ def _draw_fitted(draw, xy, value, max_width, size=24, min_size=10, bold=False, f
             break
         current_size -= 1
     draw.text(xy, value, font=_font(current_size, bold), fill=fill, anchor=anchor)
-    return current_size
 
 
 def _team_name(team):
@@ -76,7 +75,6 @@ def build_post_summary(poll):
     result_set = get_result_set(poll)
     result_rows = list(result_set)
     top25 = [row for row in comparison if row["rank"] <= 25]
-    top10 = top25[:10]
     ballots = list(
         Ballot.objects.filter(
             poll=poll,
@@ -101,7 +99,6 @@ def build_post_summary(poll):
     scored_ballots = [
         {
             "username": ballot.user.username,
-            "ballot_id": ballot.id,
             "score": get_outlier_score(ballot.ballotentry_set.all(), results_dict, top25_dict),
         }
         for ballot in ballots
@@ -122,13 +119,10 @@ def build_post_summary(poll):
             row["team"],
             rank=row["rank"],
             std_dev=row["std_dev"],
-            votes=row["votes"],
             coverage=row["votes"] / len(ballots) if ballots else 0,
         )
         for row in polarizing
     ]
-    biggest_rise = max(top25, key=lambda row: row["rank_diff"], default=None)
-    biggest_fall = min(top25, key=lambda row: row["rank_diff"], default=None)
     biggest_ppv_gain = max(top25, key=lambda row: row["ppv_diff"], default=None)
     biggest_ppv_loss = min(top25, key=lambda row: row["ppv_diff"], default=None)
 
@@ -136,9 +130,6 @@ def build_post_summary(poll):
         "poll": str(poll),
         "voter_count": len(ballots),
         "top25": top25,
-        "top10": top10,
-        "biggest_rise": biggest_rise,
-        "biggest_fall": biggest_fall,
         "biggest_ppv_gain": biggest_ppv_gain,
         "biggest_ppv_loss": biggest_ppv_loss,
         "dropped": dropped[:3],
