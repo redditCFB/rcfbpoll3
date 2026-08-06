@@ -23,7 +23,7 @@
         {% endif %}
         {% if not ballot.overall_rationale == '' %}
             <p>
-                <strong>Overall Rationale:</strong> {{ ballot.overall_rationale }}
+                <strong>Overall Rationale:</strong> {{ ballot.overall_rationale|linebreaksbr }}
             </p>
         {% endif %}
         {% if ballot.poll.is_published or user.is_staff %}
@@ -53,7 +53,7 @@
                                         {{ entry.team.name }}
                                         </a>
                                     </td>
-                                    <td>{{ entry.rationale }}</td>
+                                    <td>{{ entry.rationale|linebreaksbr }}</td>
                                 </tr>
                             {% endfor %}
                         </table>

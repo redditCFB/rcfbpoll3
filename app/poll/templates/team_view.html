@@ -60,7 +60,7 @@
                                 </a>
                             </td>
                             <td class="text-center">{{ entry.rank }}</td>
-                            <td>{{ entry.rationale }}</td>
+                            <td>{{ entry.rationale|linebreaksbr }}</td>
                         </tr>
                     {% endif %}
                 {% endfor %}
@@ -87,7 +87,7 @@
                                 </a>
                             </td>
                             <td class="text-center">{{ entry.rank }}</td>
-                            <td>{{ entry.rationale }}</td>
+                            <td>{{ entry.rationale|linebreaksbr }}</td>
                         </tr>
                     {% endif %}
                 {% endfor %}
