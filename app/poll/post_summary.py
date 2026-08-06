@@ -216,7 +216,7 @@ def _draw_rank_movement(draw, result, x, y, size=25):
     _text(draw, (x + 27, y), str(abs(change)), size=size, bold=True, fill=color, anchor="lm")
 
 
-def _draw_top_team(canvas, draw, result, center_x, top_y, logo_size, name_size, rank_size):
+def _draw_top_team(canvas, draw, result, center_x, top_y, logo_size, rank_size):
     movement_x = center_x + logo_size // 2 + 12
     rank_x = center_x + 28
     _text(draw, (rank_x, top_y - 18), f'#{result["rank"]}', size=rank_size, bold=True, fill=GREEN, anchor="ms")
@@ -224,20 +224,17 @@ def _draw_top_team(canvas, draw, result, center_x, top_y, logo_size, name_size, 
     _draw_rank_movement(draw, result, movement_x, top_y + logo_size // 2, size=27 if logo_size > 150 else 24)
 
 
-def _draw_team_tile(canvas, draw, result, box, logo_size, show_rank=True, movement=True, frame=False):
-    x1, y1, x2, y2 = box
-    if frame:
-        draw.rounded_rectangle(box, radius=18, fill=WHITE, outline=MINT, width=3)
+def _draw_pyramid_team(canvas, draw, result, box, logo_size, movement=True):
+    x1, y1, _, _ = box
     logo_x = x1 + 10
-    logo_y = y1 + (28 if show_rank else (y2 - y1 - logo_size) // 2)
-    if show_rank:
-        if movement:
-            movement_x = logo_x + logo_size + 10
-            rank_x = (logo_x + movement_x + 48) // 2
-        else:
-            rank_x = logo_x + logo_size // 2
-        _text(draw, (rank_x, y1 + 10), f'#{result["rank"]}', size=20 if logo_size > 90 else 16, bold=True, fill=GREEN, anchor="ms")
-    _paste_logo(canvas, result["team"].handle, (logo_x, logo_y, logo_size, logo_size), border=GREEN, frame=frame)
+    logo_y = y1 + 28
+    if movement:
+        movement_x = logo_x + logo_size + 10
+        rank_x = (logo_x + movement_x + 48) // 2
+    else:
+        rank_x = logo_x + logo_size // 2
+    _text(draw, (rank_x, y1 + 10), f'#{result["rank"]}', size=20 if logo_size > 90 else 16, bold=True, fill=GREEN, anchor="ms")
+    _paste_logo(canvas, result["team"].handle, (logo_x, logo_y, logo_size, logo_size), border=GREEN, frame=False)
     if movement:
         _draw_rank_movement(draw, result, logo_x + logo_size + 10, logo_y + logo_size // 2, size=27 if logo_size > 90 else 23)
 
@@ -319,23 +316,23 @@ def render_post_summary(poll):
 
     top25 = summary["top25"]
     if top25:
-        _draw_top_team(canvas, draw, top25[0], WIDTH // 2, 218, 180, 27, 31)
+        _draw_top_team(canvas, draw, top25[0], WIDTH // 2, 218, 180, 31)
     if len(top25) > 1:
-        _draw_top_team(canvas, draw, top25[1], 300, 300, 132, 21, 23)
+        _draw_top_team(canvas, draw, top25[1], 300, 300, 132, 23)
     if len(top25) > 2:
-        _draw_top_team(canvas, draw, top25[2], 900, 300, 132, 21, 23)
+        _draw_top_team(canvas, draw, top25[2], 900, 300, 132, 23)
 
     for index, result in enumerate(top25[3:8]):
         x = 55 + index * 220
-        _draw_team_tile(canvas, draw, result, (x, 475, x + 210, 610), 102, show_rank=True, movement=True, frame=False)
+        _draw_pyramid_team(canvas, draw, result, (x, 475, x + 210, 610), 102)
 
     for index, result in enumerate(top25[8:15]):
         x = 50 + index * 160
-        _draw_team_tile(canvas, draw, result, (x, 635, x + 150, 750), 84, show_rank=True, movement=True, frame=False)
+        _draw_pyramid_team(canvas, draw, result, (x, 635, x + 150, 750), 84)
 
     for index, result in enumerate(top25[15:25]):
         x = 50 + index * 111
-        _draw_team_tile(canvas, draw, result, (x, 775, x + 104, 900), 88, show_rank=True, movement=False, frame=False)
+        _draw_pyramid_team(canvas, draw, result, (x, 775, x + 104, 900), 88, movement=False)
 
     _draw_polarizing(canvas, draw, summary, (38, 940, 580, 1225))
     _draw_momentum(canvas, draw, summary, (620, 940, 1162, 1225))
