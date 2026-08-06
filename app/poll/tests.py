@@ -169,6 +169,44 @@ class ProvisionalApplicationNotificationTests(TransactionTestCase):
         send_message.assert_called_once_with(self.application)
 
 
+class ObtainRedditRefreshTokenCommandTests(SimpleTestCase):
+    @override_settings(
+        REDDIT_MESSAGE_CLIENT_ID='client-id',
+        REDDIT_MESSAGE_CLIENT_SECRET='client-secret',
+    )
+    @patch('poll.management.commands.obtain_reddit_refresh_token.secrets.token_urlsafe', return_value='state-value')
+    @patch('poll.management.commands.obtain_reddit_refresh_token.praw.Reddit')
+    @patch('builtins.input', return_value='http://localhost:8080/?state=state-value&code=authorization-code')
+    def test_exchanges_a_valid_callback_code_for_a_refresh_token(self, mocked_input, reddit_class, token_urlsafe):
+        reddit_class.return_value.auth.url.return_value = 'https://www.reddit.com/api/v1/authorize?...'
+        reddit_class.return_value.auth.authorize.return_value = 'refresh-token'
+        output = StringIO()
+
+        call_command('obtain_reddit_refresh_token', stdout=output)
+
+        reddit_class.assert_called_once_with(
+            client_id='client-id',
+            client_secret='client-secret',
+            redirect_uri='http://localhost:8080',
+            user_agent='django:rcfbpoll:3.0 (by /u/CFB_Referee)',
+        )
+        reddit_class.return_value.auth.url.assert_called_once_with(
+            scopes=['identity', 'privatemessages'],
+            state='state-value',
+            duration='permanent',
+        )
+        reddit_class.return_value.auth.authorize.assert_called_once_with('authorization-code')
+        self.assertIn('REDDIT_MESSAGE_REFRESH_TOKEN=refresh-token', output.getvalue())
+
+    @override_settings(REDDIT_MESSAGE_CLIENT_ID='', REDDIT_MESSAGE_CLIENT_SECRET='')
+    def test_requires_reddit_web_app_credentials(self):
+        with self.assertRaisesMessage(
+            CommandError,
+            'Set REDDIT_MESSAGE_CLIENT_ID and REDDIT_MESSAGE_CLIENT_SECRET before running this command.',
+        ):
+            call_command('obtain_reddit_refresh_token')
+
+
 class TeamLogoUrlTagTests(SimpleTestCase):
     def test_renders_the_default_url(self):
         rendered = Template('{% load team_logo %}{% team_logo_url "notredame" %}').render(Context())
