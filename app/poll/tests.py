@@ -2,6 +2,7 @@ import csv
 from datetime import timedelta
 from io import StringIO
 import json
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -12,7 +13,9 @@ from django.test import SimpleTestCase, TransactionTestCase
 from django.test.utils import override_settings
 from django.utils import timezone
 
+from poll.admin import accept_applications, reject_applications
 from poll.models import Ballot, BallotEntry, Poll, ProvisionalUserApplication, Team, User, UserRole
+from poll.notifications import send_provisional_application_decision_message
 from poll.management.commands.update_team_logo_handles import TEAM_HANDLE_RENAMES
 
 
@@ -65,6 +68,99 @@ class ProvisionalApplicationTests(TransactionTestCase):
         self.assertEqual(latest_application.user, self.poll_user)
         self.assertEqual(latest_application.status, ProvisionalUserApplication.Status.OPEN)
         self.assertEqual(ProvisionalUserApplication.objects.count(), 2)
+
+
+class ProvisionalApplicationNotificationTests(TransactionTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        with connection.schema_editor() as schema_editor:
+            for model in (Team, User, UserRole, ProvisionalUserApplication):
+                schema_editor.create_model(model)
+
+    @classmethod
+    def tearDownClass(cls):
+        with connection.schema_editor() as schema_editor:
+            for model in (ProvisionalUserApplication, UserRole, User, Team):
+                schema_editor.delete_model(model)
+        super().tearDownClass()
+
+    def setUp(self):
+        self.poll_user = User.objects.create(username='notification_test_user')
+        self.application = ProvisionalUserApplication.objects.create(
+            user=self.poll_user,
+            submission_date=timezone.now(),
+            status=ProvisionalUserApplication.Status.OPEN,
+        )
+
+    @override_settings(
+        REDDIT_MESSAGE_CLIENT_ID='client-id',
+        REDDIT_MESSAGE_CLIENT_SECRET='client-secret',
+        REDDIT_MESSAGE_PASSWORD='password',
+        REDDIT_MESSAGE_USERNAME='CFB_Referee',
+    )
+    @patch('poll.notifications.praw.Reddit')
+    def test_acceptance_message_is_sent_from_configured_account(self, reddit_class):
+        self.application.status = ProvisionalUserApplication.Status.ACCEPTED
+        self.application.save(update_fields=['status'])
+
+        self.assertTrue(send_provisional_application_decision_message(self.application))
+
+        reddit_class.assert_called_once()
+        reddit_class.return_value.redditor.assert_called_once_with('notification_test_user')
+        subject, body = reddit_class.return_value.redditor.return_value.message.call_args.args
+        self.assertEqual(subject, 'Your r/CFB Poll provisional voter application was approved')
+        self.assertIn('https://poll.redditcfb.com/', body)
+
+    @override_settings(
+        REDDIT_MESSAGE_CLIENT_ID='client-id',
+        REDDIT_MESSAGE_CLIENT_SECRET='client-secret',
+        REDDIT_MESSAGE_PASSWORD='password',
+        REDDIT_MESSAGE_USERNAME='CFB_Referee',
+    )
+    @patch('poll.notifications.praw.Reddit')
+    def test_rejection_message_is_sent_from_configured_account(self, reddit_class):
+        self.application.status = ProvisionalUserApplication.Status.REJECTED
+        self.application.save(update_fields=['status'])
+
+        self.assertTrue(send_provisional_application_decision_message(self.application))
+
+        reddit_class.return_value.redditor.assert_called_once_with('notification_test_user')
+        subject, body = reddit_class.return_value.redditor.return_value.message.call_args.args
+        self.assertEqual(subject, 'Your r/CFB Poll provisional voter application was not approved')
+        self.assertNotIn('https://poll.redditcfb.com/', body)
+
+    @patch('poll.notifications.praw.Reddit')
+    def test_message_is_skipped_when_bot_credentials_are_not_configured(self, reddit_class):
+        self.application.status = ProvisionalUserApplication.Status.REJECTED
+        self.application.save(update_fields=['status'])
+
+        self.assertFalse(send_provisional_application_decision_message(self.application))
+        reddit_class.assert_not_called()
+
+    @patch('poll.admin.send_provisional_application_decision_message', return_value=True)
+    def test_admin_acceptance_decides_open_applications_once_and_notifies(self, send_message):
+        already_accepted = ProvisionalUserApplication.objects.create(
+            user=User.objects.create(username='already_accepted'),
+            submission_date=timezone.now(),
+            status=ProvisionalUserApplication.Status.ACCEPTED,
+        )
+        accept_applications(None, None, ProvisionalUserApplication.objects.all())
+
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, ProvisionalUserApplication.Status.ACCEPTED)
+        self.assertEqual(UserRole.objects.filter(user=self.poll_user, role=UserRole.Role.PROVISIONAL).count(), 1)
+        send_message.assert_called_once_with(self.application)
+        already_accepted.refresh_from_db()
+        self.assertEqual(already_accepted.status, ProvisionalUserApplication.Status.ACCEPTED)
+
+    @patch('poll.admin.send_provisional_application_decision_message', return_value=True)
+    def test_admin_rejection_notifies_open_applications(self, send_message):
+        reject_applications(None, None, ProvisionalUserApplication.objects.filter(pk=self.application.pk))
+
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, ProvisionalUserApplication.Status.REJECTED)
+        send_message.assert_called_once_with(self.application)
 
 
 class TeamLogoUrlTagTests(SimpleTestCase):

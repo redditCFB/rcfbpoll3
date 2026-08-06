@@ -46,3 +46,20 @@ docker compose up --build
 
 `down -v` deletes the local PostgreSQL volume. It does not affect production
 or any remote database.
+
+### Provisional-application notifications
+
+When a staff member accepts or rejects an open provisional-voter application in
+Django admin, the site sends the applicant a Reddit private message from
+`CFB_Referee`. Messaging is disabled until all of these deployment environment
+variables are set for a script-type Reddit application:
+
+```text
+REDDIT_MESSAGE_CLIENT_ID
+REDDIT_MESSAGE_CLIENT_SECRET
+REDDIT_MESSAGE_PASSWORD
+```
+
+`REDDIT_MESSAGE_USERNAME` defaults to `CFB_Referee`; set it if a different
+bot account is used. Failed deliveries are logged and shown as an admin warning,
+but never reverse the application decision.
