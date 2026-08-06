@@ -14,12 +14,17 @@ from .utils import get_outlier_score, get_result_set, get_result_set_record, get
 
 WIDTH = 1200
 HEIGHT = 1500
-BACKGROUND = "#f3f4f6"
-INK = "#16202a"
-MUTED = "#5d6872"
-ACCENT = "#1f8a70"
-CARD = "#ffffff"
-BORDER = "#d6dbe0"
+PAPER = "#f5f1e8"
+NAVY = "#102333"
+GREEN = "#118562"
+MINT = "#a9dfc8"
+GOLD = "#f1be4b"
+CORAL = "#ef6b63"
+INK = "#102333"
+MUTED = "#52616e"
+WHITE = "#ffffff"
+LILAC = "#e8ddf5"
+PEACH = "#ffe0b2"
 
 
 def _font(size, bold=False):
@@ -40,9 +45,16 @@ def _text(draw, xy, value, size=24, bold=False, fill=INK, anchor=None):
     draw.text(xy, str(value), font=_font(size, bold), fill=fill, anchor=anchor)
 
 
-def _truncate(value, length):
+def _draw_fitted(draw, xy, value, max_width, size=24, min_size=10, bold=False, fill=INK, anchor=None):
     value = str(value)
-    return value if len(value) <= length else value[: length - 1] + "…"
+    current_size = size
+    while current_size > min_size:
+        font = _font(current_size, bold)
+        if draw.textbbox((0, 0), value, font=font)[2] <= max_width:
+            break
+        current_size -= 1
+    draw.text(xy, value, font=_font(current_size, bold), fill=fill, anchor=anchor)
+    return current_size
 
 
 def _team_name(team):
@@ -63,7 +75,6 @@ def build_post_summary(poll):
     comparison = list(get_results_comparison(poll))
     result_set = get_result_set(poll)
     result_rows = list(result_set)
-
     top25 = [row for row in comparison if row["rank"] <= 25]
     top10 = top25[:10]
     ballots = list(
@@ -105,10 +116,21 @@ def build_post_summary(poll):
             if row.rank <= 25 and row.team_id not in current_ids
         ]
 
-    most_agreed = sorted(result_rows, key=lambda row: row.std_dev)[:3]
-    least_agreed = sorted(result_rows, key=lambda row: row.std_dev, reverse=True)[:3]
+    polarizing = sorted(top25, key=lambda row: row["std_dev"], reverse=True)[:3]
+    polarizing = [
+        _team_payload(
+            row["team"],
+            rank=row["rank"],
+            std_dev=row["std_dev"],
+            votes=row["votes"],
+            coverage=row["votes"] / len(ballots) if ballots else 0,
+        )
+        for row in polarizing
+    ]
     biggest_rise = max(top25, key=lambda row: row["rank_diff"], default=None)
     biggest_fall = min(top25, key=lambda row: row["rank_diff"], default=None)
+    biggest_ppv_gain = max(top25, key=lambda row: row["ppv_diff"], default=None)
+    biggest_ppv_loss = min(top25, key=lambda row: row["ppv_diff"], default=None)
 
     return {
         "poll": str(poll),
@@ -116,16 +138,11 @@ def build_post_summary(poll):
         "top10": top10,
         "biggest_rise": biggest_rise,
         "biggest_fall": biggest_fall,
+        "biggest_ppv_gain": biggest_ppv_gain,
+        "biggest_ppv_loss": biggest_ppv_loss,
         "dropped": dropped[:3],
-        "most_agreed": [
-            _team_payload(row.team, std_dev=row.std_dev) for row in most_agreed
-        ],
-        "least_agreed": [
-            _team_payload(row.team, std_dev=row.std_dev) for row in least_agreed
-        ],
-        "most_unusual": sorted(
-            scored_ballots, key=lambda item: item["score"], reverse=True
-        )[:3],
+        "polarizing": polarizing,
+        "most_unusual": sorted(scored_ballots, key=lambda item: item["score"], reverse=True)[:3],
         "least_unusual": sorted(scored_ballots, key=lambda item: item["score"])[:3],
     }
 
@@ -137,22 +154,22 @@ def _load_logo(handle):
         response = requests.get(url, timeout=(2, 4))
         response.raise_for_status()
         image = Image.open(BytesIO(response.content)).convert("RGBA")
-        image.thumbnail((160, 160), Image.Resampling.LANCZOS)
+        image.thumbnail((180, 180), Image.Resampling.LANCZOS)
         return image.copy()
     except (OSError, requests.RequestException):
         return None
 
 
-def _paste_logo(canvas, handle, box):
+def _paste_logo(canvas, handle, box, border=GREEN):
     x, y, width, height = box
     draw = ImageDraw.Draw(canvas)
-    draw.rounded_rectangle((x, y, x + width, y + height), radius=width // 5, fill="#ffffff", outline=BORDER)
+    draw.ellipse((x, y, x + width, y + height), fill=WHITE, outline=border, width=3)
     logo = _load_logo(handle)
     if logo:
         fitted = ImageOps.contain(logo, (width - 18, height - 18))
         canvas.alpha_composite(fitted, (x + (width - fitted.width) // 2, y + (height - fitted.height) // 2))
     else:
-        _text(draw, (x + width // 2, y + height // 2), handle[:3].upper(), size=24, bold=True, anchor="mm", fill=ACCENT)
+        _text(draw, (x + width // 2, y + height // 2), handle[:3].upper(), size=max(14, width // 4), bold=True, anchor="mm", fill=GREEN)
 
 
 @lru_cache(maxsize=1)
@@ -169,112 +186,152 @@ def _load_site_logo():
     return None
 
 
-def _draw_card(draw, box, title, subtitle=None):
-    draw.rounded_rectangle(box, radius=18, fill=CARD, outline=BORDER, width=2)
-    _text(draw, (box[0] + 22, box[1] + 20), title, size=22, bold=True, fill=ACCENT)
-    if subtitle:
-        _text(draw, (box[0] + 22, box[1] + 50), subtitle, size=15, fill=MUTED)
+def _pill(draw, x, y, value, fill, text_fill=WHITE, width=None, size=13):
+    value = str(value)
+    width = width or max(42, draw.textbbox((0, 0), value, font=_font(size, True))[2] + 20)
+    draw.rounded_rectangle((x, y, x + width, y + 26), radius=13, fill=fill)
+    _text(draw, (x + width / 2, y + 13), value, size=size, bold=True, fill=text_fill, anchor="mm")
 
 
-def _draw_team_metric(canvas, draw, team, label, y, x, width=0):
-    _paste_logo(canvas, team["handle"] if isinstance(team, dict) else team.handle, (x, y, 52, 52))
-    short_name = team["short_name"] if isinstance(team, dict) else _team_name(team)
-    _text(draw, (x + 65, y + 3), _truncate(short_name, 18), size=19, bold=True)
-    _text(draw, (x + 65, y + 29), label, size=15, fill=MUTED)
-
-
-def _movement_label(result, kind):
+def _movement_values(result):
+    rank = result.get("rank_diff_str", "--")
     ppv = result.get("ppv_diff", 0)
-    ppv_text = f'{ppv:+.2f} PPV'
-    return f'{kind} {result["rank_diff_str"]} · {ppv_text}'
+    rank_color = GREEN if result.get("rank_diff", 0) > 0 else CORAL if result.get("rank_diff", 0) < 0 else MUTED
+    rank_text = "NEW" if rank == "NEW" else rank
+    ppv_color = GREEN if ppv > 0 else CORAL if ppv < 0 else MUTED
+    return rank_text, rank_color, f"{ppv:+.2f} PPV", ppv_color
 
 
-def _draw_pyramid_team(canvas, draw, result, box, name_size):
+def _draw_movement_badges(draw, result, x, y, scale=1):
+    rank_text, rank_color, ppv_text, ppv_color = _movement_values(result)
+    _pill(draw, x, y, rank_text, rank_color, width=int(48 * scale), size=max(10, int(12 * scale)))
+    _pill(draw, x + int(54 * scale), y, ppv_text, ppv_color, width=int(80 * scale), size=max(9, int(11 * scale)))
+
+
+def _draw_top_team(canvas, draw, result, center_x, top_y, logo_size, name_size, movement_scale=1):
+    _text(draw, (center_x, top_y - 8), f'#{result["rank"]}', size=30 if logo_size > 120 else 22, bold=True, fill=GOLD, anchor="ms")
+    _paste_logo(canvas, result["team"].handle, (center_x - logo_size // 2, top_y, logo_size, logo_size), border=GOLD if result["rank"] == 1 else GREEN)
+    _draw_fitted(draw, (center_x, top_y + logo_size + 16), result["team"].name, 250 if logo_size > 120 else 190, size=name_size, min_size=10, bold=True, anchor="ms", fill=WHITE)
+    _text(draw, (center_x, top_y + logo_size + 42), f'{result["points"]:,} pts', size=14, fill=MINT, anchor="ms")
+    _draw_movement_badges(draw, result, center_x - int(67 * movement_scale), top_y + logo_size + 55, movement_scale)
+
+
+def _draw_chase_team(canvas, draw, result, box):
     x1, y1, x2, y2 = box
-    compact = x2 - x1 < 200
-    draw.rounded_rectangle(box, radius=15, fill=CARD, outline=BORDER, width=2)
-    logo_size = 52 if compact else 64
-    _paste_logo(canvas, result["team"].handle, (x1 + 8 if compact else x1 + 12, y1 + 18, logo_size, logo_size))
-    text_x = x1 + 66 if compact else x1 + 88
-    _text(draw, (text_x, y1 + 24), f'#{result["rank"]}', size=16 if compact else 18, bold=True, fill=ACCENT)
-    _text(draw, (text_x, y1 + 47), _truncate(result["team"].short_name, 8 if compact else 15), size=name_size if not compact else 13, bold=True)
-    stats = f'{result["points"]:,} pts' if compact else f'{result["points"]:,} pts · {result["first_place_votes"]} #1'
-    _text(draw, (text_x, y1 + 78), stats, size=11 if compact else 13, fill=MUTED)
+    draw.rounded_rectangle(box, radius=22, fill=WHITE, outline=MINT, width=3)
+    _paste_logo(canvas, result["team"].handle, (x1 + 14, y1 + 18, 70, 70))
+    _text(draw, (x1 + 98, y1 + 28), f'#{result["rank"]}', size=18, bold=True, fill=GREEN)
+    _draw_fitted(draw, (x1 + 98, y1 + 53), result["team"].name, x2 - x1 - 110, size=17, min_size=10, bold=True, fill=INK)
+    _draw_movement_badges(draw, result, x1 + 14, y2 - 38, 0.85)
+
+
+def _draw_polarizing(canvas, draw, summary, box):
+    x1, y1, x2, y2 = box
+    draw.rounded_rectangle(box, radius=28, fill=LILAC)
+    _text(draw, (x1 + 28, y1 + 28), "MOST POLARIZING", size=23, bold=True, fill=NAVY)
+    _text(draw, (x1 + 28, y1 + 56), "Highest spread inside the Top 25", size=14, fill=MUTED)
+    max_std = max((item["std_dev"] for item in summary["polarizing"]), default=1) or 1
+    y = y1 + 92
+    for item in summary["polarizing"]:
+        _paste_logo(canvas, item["handle"], (x1 + 25, y, 52, 52), border=NAVY)
+        _text(draw, (x1 + 88, y + 3), f'#{item["rank"]}', size=15, bold=True, fill=NAVY)
+        _draw_fitted(draw, (x1 + 125, y + 5), item["name"], 175, size=17, min_size=10, bold=True, fill=INK)
+        _text(draw, (x1 + 88, y + 30), f'spread {item["std_dev"]:.1f}  |  {item["coverage"]:.0%} ranked', size=12, fill=MUTED)
+        bar_width = int(150 * item["std_dev"] / max_std)
+        draw.rounded_rectangle((x2 - 180, y + 22, x2 - 30, y + 31), radius=5, fill="#d5c8e5")
+        draw.rounded_rectangle((x2 - 180, y + 22, x2 - 180 + bar_width, y + 31), radius=5, fill=NAVY)
+        y += 62
+
+
+def _draw_momentum(canvas, draw, summary, box):
+    x1, y1, x2, y2 = box
+    draw.rounded_rectangle(box, radius=28, fill=PEACH)
+    _text(draw, (x1 + 28, y1 + 28), "MOMENTUM", size=23, bold=True, fill=NAVY)
+    _text(draw, (x1 + 28, y1 + 56), "Biggest points-per-voter swings", size=14, fill=MUTED)
+    for index, (label, result, color, sign) in enumerate((
+        ("SURGE", summary["biggest_ppv_gain"], GREEN, "+"),
+        ("SLIP", summary["biggest_ppv_loss"], CORAL, "-"),
+    )):
+        y = y1 + 90 + index * 75
+        if not result:
+            continue
+        _paste_logo(canvas, result["team"].handle, (x1 + 25, y, 52, 52), border=color)
+        _text(draw, (x1 + 90, y + 1), label, size=12, bold=True, fill=color)
+        _draw_fitted(draw, (x1 + 90, y + 20), result["team"].name, 190, size=17, min_size=10, bold=True, fill=INK)
+        _text(draw, (x2 - 35, y + 11), f'{sign}{abs(result["ppv_diff"]):.2f}', size=22, bold=True, fill=color, anchor="ra")
+        _text(draw, (x2 - 35, y + 38), f'PPV  |  rank {result["rank_diff_str"]}', size=12, fill=MUTED, anchor="ra")
+    dropped = summary["dropped"]
+    if dropped:
+        _text(draw, (x1 + 28, y2 - 29), "DROPPED", size=11, bold=True, fill=MUTED)
+        x = x1 + 105
+        for item in dropped:
+            _paste_logo(canvas, item["handle"], (x, y2 - 43, 28, 28), border=CORAL)
+            x += 38
+
+
+def _draw_voter_signal(canvas, draw, summary, box):
+    x1, y1, x2, y2 = box
+    draw.rounded_rectangle(box, radius=28, fill=NAVY)
+    _text(draw, (x1 + 28, y1 + 25), "VOTER SIGNAL", size=23, bold=True, fill=MINT)
+    _text(draw, (x1 + 28, y1 + 54), "Lower scores are closer to the aggregate poll", size=14, fill="#c7d4da")
+    columns = (("MOST UNUSUAL", summary["most_unusual"], CORAL, x1 + 30), ("CLOSEST TO CONSENSUS", summary["least_unusual"], GOLD, x1 + 545))
+    for title, voters, color, x in columns:
+        _text(draw, (x, y1 + 92), title, size=17, bold=True, fill=color)
+        for index, voter in enumerate(voters):
+            y = y1 + 125 + index * 50
+            draw.rounded_rectangle((x, y, x + 490, y + 36), radius=18, fill="#1b3445")
+            _draw_fitted(draw, (x + 16, y + 18), voter["username"], 360, size=16, min_size=10, fill=WHITE, anchor="lm")
+            _pill(draw, x + 406, y + 5, f'{voter["score"]:.1f}', color, width=68, size=12)
 
 
 def render_post_summary(poll):
     summary = build_post_summary(poll)
-    canvas = Image.new("RGBA", (WIDTH, HEIGHT), BACKGROUND)
+    canvas = Image.new("RGBA", (WIDTH, HEIGHT), PAPER)
     draw = ImageDraw.Draw(canvas)
+    draw.rectangle((0, 0, WIDTH, 180), fill=GREEN)
+    for offset in (0, 220, 540, 900):
+        draw.ellipse((offset, -110, offset + 260, 150), fill="#169b74")
 
     site_logo = _load_site_logo()
     if site_logo:
-        fitted = ImageOps.contain(site_logo, (68, 68))
-        canvas.alpha_composite(fitted, (48, 35))
-    _text(draw, (132, 48), "/r/CFB POLL", size=25, bold=True, fill=ACCENT)
-    _text(draw, (132, 80), summary["poll"], size=46, bold=True)
-    _text(draw, (WIDTH - 55, 61), f'{summary["voter_count"]} main ballots', size=19, fill=MUTED, anchor="ra")
-    _text(draw, (132, 132), "A visual snapshot of the poll", size=20, fill=MUTED)
+        fitted = ImageOps.contain(site_logo, (92, 92))
+        canvas.alpha_composite(fitted, (48, 34))
+    _text(draw, (158, 47), "/r/CFB POLL", size=27, bold=True, fill=WHITE)
+    _text(draw, (158, 82), summary["poll"], size=47, bold=True, fill=WHITE)
+    _text(draw, (WIDTH - 52, 62), f'{summary["voter_count"]} main ballots', size=18, fill=MINT, anchor="ra")
+    _text(draw, (158, 136), "A poll poster built from the ballots", size=17, fill="#d8f1e7")
 
-    pyramid = (45, 180, WIDTH - 45, 760)
-    draw.rounded_rectangle(pyramid, radius=20, fill="#e8f2ef", outline="#b8d8ce", width=2)
-    _text(draw, (75, 213), "THE TOP TEN", size=24, bold=True, fill=ACCENT)
-    _text(draw, (WIDTH - 75, 218), "logos scale with rank", size=15, fill=MUTED, anchor="ra")
+    hero = (38, 180, WIDTH - 38, 850)
+    draw.rounded_rectangle(hero, radius=34, fill=NAVY)
+    for y in range(230, 835, 80):
+        draw.line((55, y, WIDTH - 55, y), fill="#1b3445", width=2)
+    _text(draw, (70, 214), "THE TOP TEN", size=21, bold=True, fill=MINT)
+    _text(draw, (WIDTH - 70, 216), "rank + movement", size=14, fill="#c7d4da", anchor="ra")
 
-    rows = []
-    cursor = 0
-    for count in (1, 3, 6):
-        rows.append(summary["top10"][cursor:cursor + count])
-        cursor += count
-    y = 265
-    tier_specs = ((250, 120, 21, 12), (250, 110, 19, 10), (170, 95, 15, 8))
-    for row_index, row in enumerate(rows):
-        tile_width, tile_height, name_size, gap = tier_specs[row_index]
+    top10 = summary["top10"]
+    if top10:
+        _draw_top_team(canvas, draw, top10[0], WIDTH // 2, 248, 142, 28, 0.95)
+    if len(top10) > 1:
+        _draw_top_team(canvas, draw, top10[1], 300, 298, 104, 21, 0.82)
+    if len(top10) > 2:
+        _draw_top_team(canvas, draw, top10[2], 900, 298, 104, 21, 0.82)
+
+    chase = top10[3:10]
+    for row_index, row in enumerate((chase[:4], chase[4:])):
+        tile_width = 250
+        gap = 16
         row_width = len(row) * tile_width + max(0, len(row) - 1) * gap
         x = (WIDTH - row_width) // 2
+        y = 510 + row_index * 135
         for result in row:
-            _draw_pyramid_team(canvas, draw, result, (x, y, x + tile_width, y + tile_height), 21 if row_index < 2 else 18)
+            _draw_chase_team(canvas, draw, result, (x, y, x + tile_width, y + 108))
             x += tile_width + gap
-        y += tile_height + 15
 
-    card_y = 785
-    card_gap = 22
-    card_width = (WIDTH - 90 - card_gap) // 2
-    left = (45, card_y, 45 + card_width, 1050)
-    right = (45 + card_width + card_gap, card_y, WIDTH - 45, 1050)
-    _draw_card(draw, left, "WHERE VOTERS DISAGREED", "Highest ranking spread")
-    _draw_card(draw, right, "MOVEMENT", "Rank change + points per voter")
+    _draw_polarizing(canvas, draw, summary, (38, 875, 580, 1150))
+    _draw_momentum(canvas, draw, summary, (620, 875, 1162, 1150))
+    _draw_voter_signal(canvas, draw, summary, (38, 1175, 1162, 1460))
 
-    y = card_y + 78
-    for row in summary["least_agreed"]:
-        _draw_team_metric(canvas, draw, row, f'disagreement σ {row["std_dev"]:.1f}', y, left[0] + 20)
-        y += 55
-
-    y = card_y + 78
-    if summary["biggest_rise"]:
-        rise = summary["biggest_rise"]
-        _draw_team_metric(canvas, draw, rise["team"], _movement_label(rise, "rise"), y, right[0] + 20)
-        y += 55
-    if summary["biggest_fall"]:
-        fall = summary["biggest_fall"]
-        _draw_team_metric(canvas, draw, fall["team"], _movement_label(fall, "fall"), y, right[0] + 20)
-        y += 55
-    dropped = ", ".join(item["short_name"] for item in summary["dropped"])
-    _text(draw, (right[0] + 20, y + 5), _truncate(f'Dropped: {dropped or "none"}', 34), size=15, fill=MUTED)
-
-    footer_y = 1075
-    _draw_card(draw, (45, footer_y, WIDTH - 45, HEIGHT - 45), "VOTER SIGNAL", "The ballots furthest from /r/CFB consensus")
-    _text(draw, (70, footer_y + 78), "MOST UNUSUAL", size=18, bold=True, fill=INK)
-    _text(draw, (440, footer_y + 78), "MOST TYPICAL", size=18, bold=True, fill=INK)
-    for index in range(3):
-        most = summary["most_unusual"][index] if index < len(summary["most_unusual"]) else None
-        least = summary["least_unusual"][index] if index < len(summary["least_unusual"]) else None
-        y = footer_y + 115 + index * 45
-        if most:
-            _text(draw, (70, y), f'{most["username"]}  {most["score"]:.1f}', size=16)
-        if least:
-            _text(draw, (440, y), f'{least["username"]}  {least["score"]:.1f}', size=16)
-
+    _text(draw, (WIDTH // 2, 1480), "poll.redditcfb.com", size=13, fill=MUTED, anchor="mm")
     output = BytesIO()
     canvas.convert("RGB").save(output, format="PNG", optimize=True)
     return output.getvalue()
