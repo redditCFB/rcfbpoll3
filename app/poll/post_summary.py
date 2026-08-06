@@ -298,15 +298,12 @@ def render_post_summary(poll):
         canvas.alpha_composite(fitted, (48, 34))
     _text(draw, (158, 47), "/r/CFB POLL", size=27, bold=True, fill=WHITE)
     _text(draw, (158, 82), summary["poll"], size=47, bold=True, fill=WHITE)
-    _text(draw, (WIDTH - 52, 62), f'{summary["voter_count"]} main ballots', size=18, fill=MINT, anchor="ra")
-    _text(draw, (158, 136), "A poll poster built from the ballots", size=17, fill="#d8f1e7")
 
     hero = (38, 180, WIDTH - 38, 850)
     draw.rounded_rectangle(hero, radius=34, fill=NAVY)
     for y in range(230, 835, 80):
         draw.line((55, y, WIDTH - 55, y), fill="#1b3445", width=2)
     _text(draw, (70, 214), "THE TOP TEN", size=21, bold=True, fill=MINT)
-    _text(draw, (WIDTH - 70, 216), "rank + movement", size=14, fill="#c7d4da", anchor="ra")
 
     top10 = summary["top10"]
     if top10:
@@ -331,7 +328,7 @@ def render_post_summary(poll):
     _draw_momentum(canvas, draw, summary, (620, 875, 1162, 1150))
     _draw_voter_signal(canvas, draw, summary, (38, 1175, 1162, 1460))
 
-    _text(draw, (WIDTH // 2, 1480), "poll.redditcfb.com", size=13, fill=MUTED, anchor="mm")
+    _text(draw, (WIDTH // 2, 1480), "For full results, visit poll.redditcfb.com", size=13, fill=MUTED, anchor="mm")
     output = BytesIO()
     canvas.convert("RGB").save(output, format="PNG", optimize=True)
     return output.getvalue()
