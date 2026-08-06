@@ -5,6 +5,33 @@ from django.test import RequestFactory, SimpleTestCase
 
 
 class PollPostTemplateTests(SimpleTestCase):
+    def test_includes_summary_image_link_without_embedding_image(self):
+        request = RequestFactory().get('/poll_post/')
+        request.user = SimpleNamespace(is_anonymous=False, is_staff=False, username='test-user')
+        top25 = [
+            SimpleNamespace(
+                rank_diff=0,
+                rank=rank,
+                rank_diff_str='--',
+                team=SimpleNamespace(handle=f'team-{rank}', name=f'Team {rank}', short_name=f'Team {rank}'),
+                first_place_votes=0,
+                points=100,
+            )
+            for rank in range(1, 6)
+        ]
+        rendered = get_template('poll_post.html').render({
+            'poll': '2025 Week 12',
+            'top25': top25,
+            'next_ten': [],
+            'dropped': [],
+            'links': {'summary_image': 'https://poll.example/summary/12.png'},
+        }, request)
+
+        summary_link = '* [Poll Summary Image](https://poll.example/summary/12.png)<br>'
+        self.assertIn(summary_link, rendered)
+        self.assertLess(rendered.index(summary_link), rendered.index('* [Detailed Results]'))
+        self.assertNotIn('<img src="https://poll.example/summary/12.png"', rendered)
+
     def test_includes_the_peoples_poll_link(self):
         request = RequestFactory().get('/poll_post/')
         request.user = SimpleNamespace(is_anonymous=False, is_staff=False, username='test-user')
@@ -35,6 +62,7 @@ class PollPostTemplateTests(SimpleTestCase):
                 'faq': 'https://poll.example/faq',
                 'contribute': 'https://poll.example/contribute',
                 'hall': 'https://poll.example/hall',
+                'summary_image': 'https://poll.example/summary/12.png',
             },
         }, request)
 

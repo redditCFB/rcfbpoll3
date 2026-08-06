@@ -14,14 +14,6 @@
             #4 {{ top25.3.team.short_name }}
             #5 {{ top25.4.team.short_name }}
         </h4>
-        <div class="my-3">
-            <h5>Post summary image</h5>
-            <img src="{{ links.summary_image }}" class="img-fluid border rounded" alt="Automated poll summary image">
-            <br>
-            <a class="btn btn-primary mt-2" href="{{ links.summary_image }}" download>Download summary image</a>
-            <a class="btn btn-secondary mt-2" href="{{ links.summary_image_refresh }}">Regenerate image</a>
-        </div>
-        <br>
         Here are the results for the {{ poll }} /r/CFB Poll:<br>
         <br>
         |Rank|Change|Team (#1 Votes)|Points|<br>
@@ -45,6 +37,7 @@
         <br><br>
         **POLL SITE**: https://poll.redditcfb.com/
         <br><br>
+        * [Poll Summary Image]({{ links.summary_image }})<br>
         * [Detailed Results]({{ links.results }})<br>
         * [Results w/Provisional Voters]({{ links.provisional }})<br>
         * [THE PEOPLE'S POLL]({{ links.peoples_poll }})<br>
