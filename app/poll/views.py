@@ -552,6 +552,14 @@ def edit_ballot(request, ballot_id):
         conferences = list(
             teams.filter(division='FBS').values_list('conference', flat=True).distinct().order_by('conference')
         )
+        last_submitted_ballot = Ballot.objects.filter(
+            user=ballot.user, submission_date__isnull=False
+        ).exclude(pk=ballot.pk).order_by('-submission_date').first()
+        previous_rationale = (
+            last_submitted_ballot.overall_rationale
+            if last_submitted_ballot and last_submitted_ballot.overall_rationale
+            else None
+        )
 
         team_groups = {}
         for conference in conferences:
@@ -575,7 +583,8 @@ def edit_ballot(request, ballot_id):
             'entries': entries,
             'teams': team_dict,
             'team_groups': team_groups,
-            'ranks': range(1, 26)
+            'ranks': range(1, 26),
+            'previous_rationale': previous_rationale
         })
 
 
