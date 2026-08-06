@@ -205,7 +205,9 @@ def _draw_rank_movement(draw, result, x, y, size=25):
     if change == 0:
         _text(draw, (x, y), "—", size=size, bold=True, fill=MUTED, anchor="lm")
         return
-    direction = -1 if change > 0 else 1
+    # rank_diff is previous rank minus current rank: positive means the
+    # numeric rank decreased, which is an upward improvement.
+    direction = 1 if change > 0 else -1
     draw.polygon(
         ((x, y + direction * 6), (x + 12, y - direction * 7), (x + 24, y + direction * 6)),
         fill=color,
