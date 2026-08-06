@@ -11,6 +11,10 @@ SCORE_OFFSET = 0.75
 
 
 def get_result_set(poll, set_options=None):
+    return get_result_set_record(poll, set_options).results()
+
+
+def get_result_set_record(poll, set_options=None):
     options = {
         'human': True,
         'computer': True,
@@ -36,13 +40,11 @@ def get_result_set(poll, set_options=None):
 
     if result_set:
         if result_set.needs_update():
-            results = result_set.update()
-        else:
-            results = result_set.results()
+            result_set.update()
     else:
-        results = _create_result_set(poll, options)
+        result_set = _create_result_set(poll, options)
 
-    return results
+    return result_set
 
 
 def _create_result_set(poll, options):
@@ -59,7 +61,8 @@ def _create_result_set(poll, options):
         after_ap=options['after_ap']
     )
     result_set.save()
-    return result_set.update()
+    result_set.update()
+    return result_set
 
 
 def get_results_comparison(poll, set_options=None):
@@ -116,7 +119,17 @@ def get_results_comparison(poll, set_options=None):
 
 
 def get_outlier_analysis(ballot, results_dict, top25):
-    ballot_entries = ballot.get_entries()
+    analysis = _get_outlier_analysis(ballot.get_entries(), results_dict, top25)
+    analysis['ballot'] = ballot
+    return analysis
+
+
+def get_outlier_score(ballot_entries, results_dict, top25):
+    """Return the same outlier score used by the ballot analysis views."""
+    return _get_outlier_analysis(ballot_entries, results_dict, top25)['score']
+
+
+def _get_outlier_analysis(ballot_entries, results_dict, top25):
 
     total_score = 0
     ranks = []
@@ -144,7 +157,6 @@ def get_outlier_analysis(ballot, results_dict, top25):
                 total_score += score
 
     return {
-        'ballot': ballot,
         'ranks': ranks,
         'omissions': omissions,
         'score': total_score
