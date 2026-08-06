@@ -8,7 +8,7 @@
                     <strong>Ballot Type:</strong> {{ ballot.get_poll_type_display }}
                 </p>
                 <p>
-                    <strong>Overall Rationale:</strong> {{ ballot.overall_rationale }}
+                    <strong>Overall Rationale:</strong> {{ ballot.overall_rationale|linebreaksbr }}
                 </p>
                 <table class="table table-sm table-striped">
                     <tr>
@@ -24,7 +24,7 @@
                                 {{ entry.team.short_name }}
                                 </a>
                             </td>
-                            <td>{{ entry.rationale }}</td>
+                            <td>{{ entry.rationale|linebreaksbr }}</td>
                         </tr>
                     {% endfor %}
                 </table>
