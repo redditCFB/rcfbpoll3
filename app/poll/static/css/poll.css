@@ -90,3 +90,27 @@ body {
 #conference-teams {
     min-width: 0;
 }
+
+@media (max-width: 1399.98px) {
+    #team-picker {
+        flex-direction: column;
+    }
+
+    #conference-tabs {
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        width: 100%;
+        margin-right: 0 !important;
+        margin-bottom: 1rem;
+    }
+
+    #conference-tabs .nav-link {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    #conference-teams {
+        width: 100%;
+    }
+}
