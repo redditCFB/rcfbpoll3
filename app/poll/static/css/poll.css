@@ -91,18 +91,18 @@ body {
     min-width: 0;
 }
 
-@media (max-width: 575.98px) {
+@media (max-width: 1399.98px) {
     #team-picker {
         flex-direction: column;
     }
 
     #conference-tabs {
         flex-direction: row;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
+        gap: 0.25rem;
         width: 100%;
         margin-right: 0 !important;
         margin-bottom: 1rem;
-        overflow-x: auto;
     }
 
     #conference-tabs .nav-link {
