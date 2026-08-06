@@ -6,3 +6,4 @@ django-debug-toolbar>=5.2,<6.0
 pytz
 django-allauth
 requests
+Pillow

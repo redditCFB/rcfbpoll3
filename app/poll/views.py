@@ -14,6 +14,7 @@ from django.utils.text import slugify
 
 from .models import AboutPage, Ballot, BallotEntry, Poll, ProvisionalUserApplication, User, UserRole, Team
 from .utils import check_for_errors, check_for_warnings, get_outlier_analysis, get_result_set, get_results_comparison
+from .post_summary import render_post_summary
 
 
 def index(request):
@@ -405,6 +406,7 @@ def poll_post(request):
         'contribute': request.build_absolute_uri('/about/?p=contribute'),
         'hall': request.build_absolute_uri('/about/?p=voters'),
     }
+    links['summary_image'] = request.build_absolute_uri('/poll_post/summary/%d.png' % poll.id)
 
     return render(request, 'poll_post.html', {
         'poll': poll,
@@ -413,6 +415,16 @@ def poll_post(request):
         'dropped': display_lists['dropped'],
         'links': links
     })
+
+
+def poll_post_summary(request, poll_id):
+    if not request.user.is_staff:
+        return HttpResponseForbidden()
+
+    poll = Poll.objects.get(pk=poll_id)
+    response = HttpResponse(render_post_summary(poll), content_type='image/png')
+    response['Content-Disposition'] = 'inline; filename="%s-summary.png"' % poll
+    return response
 
 
 def _get_results_display_lists(poll, results):
