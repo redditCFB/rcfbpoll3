@@ -1,5 +1,8 @@
 from functools import lru_cache
 from io import BytesIO
+import os
+import tempfile
+from pathlib import Path
 
 import requests
 from django.conf import settings
@@ -257,3 +260,20 @@ def render_post_summary(poll):
     output = BytesIO()
     canvas.convert("RGB").save(output, format="PNG", optimize=True)
     return output.getvalue()
+
+
+def post_summary_path(poll):
+    return Path(settings.STATIC_ROOT) / "post_summaries" / f"poll-{poll.pk}.png"
+
+
+def cache_post_summary(poll, refresh=False):
+    path = post_summary_path(poll)
+    if path.exists() and not refresh:
+        return path
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=path.parent, suffix=".png", delete=False) as temporary:
+        temporary.write(render_post_summary(poll))
+        temporary_path = temporary.name
+    os.replace(temporary_path, path)
+    return path

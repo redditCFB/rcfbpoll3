@@ -1,8 +1,10 @@
 from datetime import timedelta
+from io import BytesIO
+import tempfile
 from unittest.mock import patch
 
 from django.db import connection
-from django.test import RequestFactory, TransactionTestCase
+from django.test import RequestFactory, TransactionTestCase, override_settings
 from django.utils import timezone
 from PIL import Image
 
@@ -60,17 +62,29 @@ class PostSummaryImageTests(TransactionTestCase):
         ])
 
     def test_renders_valid_png_with_logo_fallbacks(self):
-        with patch("poll.post_summary._load_logo", return_value=None):
-            response = views.poll_post_summary(
-                self._request(is_staff=True), self.poll.id
-            )
+        with tempfile.TemporaryDirectory() as static_root:
+            with override_settings(STATIC_ROOT=static_root), patch("poll.post_summary._load_logo", return_value=None):
+                response = views.poll_post_summary(
+                    self._request(is_staff=True), self.poll.id
+                )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "image/png")
-        image = Image.open(__import__("io").BytesIO(response.content))
+        image = Image.open(BytesIO(b"".join(response.streaming_content)))
         self.assertEqual(image.size, (1200, 1500))
 
-    def test_image_endpoint_requires_staff(self):
+    def test_published_image_is_public(self):
+        with tempfile.TemporaryDirectory() as static_root:
+            with override_settings(STATIC_ROOT=static_root), patch("poll.post_summary._load_logo", return_value=None):
+                response = views.poll_post_summary(
+                    self._request(is_staff=False), self.poll.id
+                )
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_unpublished_image_requires_staff(self):
+        self.poll.publish_date = timezone.now() + timedelta(days=1)
+        self.poll.save(update_fields=["publish_date"])
         response = views.poll_post_summary(
             self._request(is_staff=False), self.poll.id
         )

@@ -7,14 +7,14 @@ from urllib.parse import unquote
 from django.contrib.auth import logout as auth_logout
 from django.db.models import Prefetch
 from django.db.models.functions import Lower
-from django.http import HttpResponse, HttpResponseForbidden, HttpResponseBadRequest, StreamingHttpResponse
+from django.http import FileResponse, HttpResponse, HttpResponseForbidden, HttpResponseBadRequest, StreamingHttpResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.utils.text import slugify
 
 from .models import AboutPage, Ballot, BallotEntry, Poll, ProvisionalUserApplication, User, UserRole, Team
 from .utils import check_for_errors, check_for_warnings, get_outlier_analysis, get_result_set, get_results_comparison
-from .post_summary import render_post_summary
+from .post_summary import cache_post_summary
 
 
 def index(request):
@@ -406,7 +406,8 @@ def poll_post(request):
         'contribute': request.build_absolute_uri('/about/?p=contribute'),
         'hall': request.build_absolute_uri('/about/?p=voters'),
     }
-    links['summary_image'] = request.build_absolute_uri('/poll_post/summary/%d.png' % poll.id)
+    links['summary_image'] = request.build_absolute_uri('/poll/summary/%d.png' % poll.id)
+    links['summary_image_refresh'] = request.build_absolute_uri('/poll/summary/%d.png?refresh=1' % poll.id)
 
     return render(request, 'poll_post.html', {
         'poll': poll,
@@ -418,12 +419,14 @@ def poll_post(request):
 
 
 def poll_post_summary(request, poll_id):
-    if not request.user.is_staff:
+    poll = Poll.objects.get(pk=poll_id)
+    if not poll.is_published and not request.user.is_staff:
         return HttpResponseForbidden()
 
-    poll = Poll.objects.get(pk=poll_id)
-    response = HttpResponse(render_post_summary(poll), content_type='image/png')
+    refresh = request.GET.get('refresh') == '1' and request.user.is_staff
+    response = FileResponse(cache_post_summary(poll, refresh=refresh).open('rb'), content_type='image/png')
     response['Content-Disposition'] = 'inline; filename="%s-summary.png"' % poll
+    response['Cache-Control'] = 'public, max-age=300'
     return response
 
 
