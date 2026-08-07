@@ -2,12 +2,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-    dependencies = []
+    dependencies = [
+        ('poll', '0001_poll_required'),
+    ]
 
     operations = [
         migrations.RunSQL(
             sql="""
-                ALTER TABLE poll_poll ADD COLUMN required boolean NOT NULL DEFAULT FALSE;
                 UPDATE poll_poll SET required = FALSE;
                 WITH season_cutoff AS (
                     SELECT seasons.year,
@@ -31,6 +32,6 @@ class Migration(migrations.Migration):
                 WHERE poll.year = season_cutoff.year
                   AND poll.close_date >= season_cutoff.close_date;
             """,
-            reverse_sql="ALTER TABLE poll_poll DROP COLUMN required;",
+            reverse_sql=migrations.RunSQL.noop,
         ),
     ]
