@@ -74,6 +74,7 @@ class Team(models.Model):
 class Poll(models.Model):
     year = models.IntegerField()
     week = models.CharField(max_length=40)
+    required = models.BooleanField(default=False)
     open_date = models.DateTimeField()
     close_date = models.DateTimeField()
     publish_date = models.DateTimeField()

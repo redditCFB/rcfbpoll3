@@ -1,0 +1,97 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .voter-tabs { margin: 0 0 20px; border-bottom: 1px solid var(--hairline-color, #ccc); }
+    .voter-tabs a { display: inline-block; padding: 10px 14px; text-decoration: none; }
+    .voter-tabs a.active { font-weight: bold; border-bottom: 3px solid var(--primary, #417690); }
+    .voter-activity-table { width: 100%; max-width: 900px; }
+    .voter-activity-table th button { border: 0; background: transparent; color: inherit; font: inherit; font-weight: bold; cursor: pointer; padding: 0; }
+    .voter-activity-table th button::after { content: ' ↕'; font-size: .85em; }
+    .voter-activity-actions { margin: 16px 0; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    <h1>Voter activity</h1>
+    <nav class="voter-tabs" aria-label="Voter type">
+      <a href="?tab=main&year={{ selected_year|default:'' }}" class="{% if active_tab == 'main' %}active{% endif %}">Active main voters</a>
+      <a href="?tab=provisional&year={{ selected_year|default:'' }}" class="{% if active_tab == 'provisional' %}active{% endif %}">Active provisional voters</a>
+    </nav>
+    <form method="get">
+      <input type="hidden" name="tab" value="{{ active_tab }}">
+      <label for="year">Season</label>
+      <select id="year" name="year" onchange="this.form.submit()">
+        {% for year in years %}<option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>{% endfor %}
+      </select>
+    </form>
+    <form id="voter-removal-form" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="tab" value="{{ active_tab }}">
+      <input type="hidden" name="year" value="{{ selected_year|default:'' }}">
+      <div class="voter-activity-actions">
+        <button type="button" id="select-all">Select all</button>
+        <button type="submit" class="deletelink">Remove selected voters</button>
+      </div>
+      <table class="voter-activity-table" id="voter-activity-table">
+        <thead><tr>
+          <th scope="col"><span class="visually-hidden">Select</span></th>
+          <th scope="col"><button type="button" data-column="1">Username</button></th>
+          <th scope="col"><button type="button" data-column="2">Polls voted</button></th>
+          <th scope="col"><button type="button" data-column="3">Required polls voted</button></th>
+        </tr></thead>
+        <tbody>{% for voter in voters %}<tr>
+          <td><input type="checkbox" name="users" value="{{ voter.user_id }}" aria-label="Select {{ voter.user__username }}"></td>
+          <td data-sort-value="{{ voter.user__username|lower }}">{{ voter.user__username }}</td>
+          <td data-sort-value="{{ voter.poll_count }}">{{ voter.poll_count }}</td>
+          <td data-sort-value="{{ voter.required_poll_count }}">{{ voter.required_poll_count }}</td>
+        </tr>{% empty %}<tr><td colspan="4">There are no active voters in this group.</td></tr>{% endfor %}</tbody>
+      </table>
+    </form>
+    <dialog id="remove-confirmation" aria-labelledby="remove-confirmation-title">
+      <h2 id="remove-confirmation-title">Remove selected voters?</h2>
+      <p id="remove-confirmation-text"></p>
+      <button type="button" id="cancel-removal">Cancel</button>
+      <button type="button" id="confirm-removal" class="deletelink">Remove voters</button>
+    </dialog>
+  </div>
+  <script>
+    (function () {
+      const table = document.getElementById('voter-activity-table');
+      const form = document.getElementById('voter-removal-form');
+      const dialog = document.getElementById('remove-confirmation');
+      const checkboxes = () => Array.from(form.querySelectorAll('input[name="users"]'));
+      document.getElementById('select-all').addEventListener('click', function () {
+        const inputs = checkboxes(); const select = inputs.some((input) => !input.checked);
+        inputs.forEach((input) => { input.checked = select; }); this.textContent = select ? 'Clear selection' : 'Select all';
+      });
+      form.addEventListener('submit', function (event) {
+        if (form.dataset.confirmed === 'true') { form.dataset.confirmed = ''; return; }
+        const count = checkboxes().filter((input) => input.checked).length; event.preventDefault();
+        if (!count) { window.alert('Select at least one voter to remove.'); return; }
+        document.getElementById('remove-confirmation-text').textContent = `This will end ${count} active voter role${count === 1 ? '' : 's'}. Historical ballots will be kept.`;
+        dialog.showModal();
+      });
+      document.getElementById('cancel-removal').addEventListener('click', () => dialog.close());
+      document.getElementById('confirm-removal').addEventListener('click', function () {
+        dialog.close(); form.dataset.confirmed = 'true'; form.requestSubmit();
+      });
+      table.querySelectorAll('th button[data-column]').forEach((button) => {
+        button.addEventListener('click', function () {
+          const column = Number(this.dataset.column); const ascending = this.dataset.direction !== 'asc';
+          const rows = Array.from(table.tBodies[0].rows).filter((row) => row.cells.length > column);
+          rows.sort((left, right) => {
+            const leftValue = left.cells[column].dataset.sortValue; const rightValue = right.cells[column].dataset.sortValue;
+            const comparison = column > 1 ? Number(leftValue) - Number(rightValue) : leftValue.localeCompare(rightValue);
+            return ascending ? comparison : -comparison;
+          });
+          rows.forEach((row) => table.tBodies[0].appendChild(row));
+          table.querySelectorAll('th button[data-column]').forEach((other) => { other.dataset.direction = ''; });
+          this.dataset.direction = ascending ? 'asc' : 'desc';
+        });
+      });
+    }());
+  </script>
+{% endblock %}
