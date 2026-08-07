@@ -7,3 +7,4 @@ pytz
 django-allauth
 requests
 Pillow
+Pillow
