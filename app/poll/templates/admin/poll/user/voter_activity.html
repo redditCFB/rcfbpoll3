@@ -15,7 +15,6 @@
 
 {% block content %}
   <div id="content-main">
-    <h1>Voter activity</h1>
     <nav class="voter-tabs" aria-label="Voter type">
       <a href="?tab=main&year={{ selected_year|default:'' }}" class="{% if active_tab == 'main' %}active{% endif %}">Active main voters</a>
       <a href="?tab=provisional&year={{ selected_year|default:'' }}" class="{% if active_tab == 'provisional' %}active{% endif %}">Active provisional voters</a>
