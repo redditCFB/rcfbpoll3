@@ -3,18 +3,18 @@
 ###########
 
 # pull official base image
-FROM python:3.10.6-bullseye as builder
+FROM python:3.13-slim-bookworm AS builder
 
 # set work directory
 WORKDIR /usr/src/app
 
 # set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # install dependencies
-RUN pip install --upgrade pip
-RUN pip install flake8==3.9.2
+RUN python -m pip install --upgrade pip \
+    && python -m pip install flake8==7.3.0
 COPY . .
 RUN flake8 --ignore=E501,F401,W503 .
 
@@ -26,7 +26,7 @@ RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requir
 #########
 
 # pull official base image
-FROM python:3.10.6-bullseye
+FROM python:3.13-slim-bookworm
 
 RUN mkdir -p /home/app
 
@@ -39,12 +39,13 @@ RUN mkdir $APP_HOME
 RUN mkdir $APP_HOME/static
 WORKDIR $APP_HOME
 
-RUN apt-get update && apt-get -y dist-upgrade
-RUN apt install -y netcat
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /usr/src/app/requirements.txt .
-RUN pip install --no-cache /wheels/*
+RUN python -m pip install --no-cache-dir /wheels/*
 
 # copy entrypoint.sh
 COPY ./entrypoint.sh .
