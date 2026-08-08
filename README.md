@@ -46,37 +46,3 @@ docker compose up --build
 
 `down -v` deletes the local PostgreSQL volume. It does not affect production
 or any remote database.
-
-### Provisional-application notifications
-
-When a staff member accepts or rejects an open provisional-voter application in
-Django admin, the site sends the applicant a Reddit private message from
-`CFB_Referee`. Create a **web app** at Reddit while logged in as that account,
-then complete Reddit's permanent OAuth code flow as `CFB_Referee` with the
-`privatemessages` scope to obtain a refresh token. Messaging is disabled until
-these deployment environment variables are set:
-
-```text
-REDDIT_MESSAGE_CLIENT_ID
-REDDIT_MESSAGE_CLIENT_SECRET
-REDDIT_MESSAGE_REFRESH_TOKEN
-```
-
-The project includes a one-off helper for this setup. With the web app's client
-ID and secret provided as environment variables, run:
-
-```sh
-python manage.py obtain_reddit_refresh_token
-```
-
-It prints an authorization URL. Approve it while signed in as `CFB_Referee`,
-then paste the complete callback URL back into the command. The command prints
-the `REDDIT_MESSAGE_REFRESH_TOKEN` value to store in the production environment.
-It never stores the token in the database.
-
-Use the client ID and secret from that Reddit application and store the resulting
-refresh token as a deployment secret. The notifier supplies a default Reddit
-user agent, which can be overridden with `REDDIT_MESSAGE_USER_AGENT` if
-necessary. The refresh token authenticates as the account that completed the
-OAuth flow; no Reddit password is stored by the site. Failed deliveries are
-logged and shown as an admin warning, but never reverse the application decision.
