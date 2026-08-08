@@ -6,6 +6,7 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils import timezone
 
+from .notifications import send_provisional_application_decision_message
 from .models import (
     User, UserRole, UserSecondaryAffiliation, ProvisionalUserApplication, Team, Poll, Ballot, BallotEntry, ResultSet,
     Result, AboutPage
@@ -97,19 +98,37 @@ admin.site.register(User, UserAdmin)
 
 @admin.action(description='Accept selected applications')
 def accept_applications(model_admin, request, queryset):
-    queryset.update(status=ProvisionalUserApplication.Status.ACCEPTED)
-    for application in queryset:
+    applications = list(queryset.filter(status=ProvisionalUserApplication.Status.OPEN))
+    for application in applications:
+        application.status = ProvisionalUserApplication.Status.ACCEPTED
+        application.save(update_fields=['status'])
         role = UserRole(
             user=application.user,
             role=UserRole.Role.PROVISIONAL,
             start_date=timezone.now()
         )
         role.save()
+    _send_decision_messages(model_admin, request, applications)
 
 
 @admin.action(description='Reject selected applications')
 def reject_applications(model_admin, request, queryset):
-    queryset.update(status=ProvisionalUserApplication.Status.REJECTED)
+    applications = list(queryset.filter(status=ProvisionalUserApplication.Status.OPEN))
+    for application in applications:
+        application.status = ProvisionalUserApplication.Status.REJECTED
+        application.save(update_fields=['status'])
+    _send_decision_messages(model_admin, request, applications)
+
+
+def _send_decision_messages(model_admin, request, applications):
+    failed = [application for application in applications if not send_provisional_application_decision_message(application)]
+    if failed:
+        model_admin.message_user(
+            request,
+            'The decision was saved, but Reddit notifications could not be sent to: %s.' %
+            ', '.join(application.user.username for application in failed),
+            level='warning',
+        )
 
 
 class ApplicationAdmin(admin.ModelAdmin):
