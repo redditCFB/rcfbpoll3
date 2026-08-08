@@ -1,4 +1,4 @@
-FROM postgres:17.0-alpine
+FROM postgres:18.4-alpine
 
 RUN apk add --no-cache curl
 

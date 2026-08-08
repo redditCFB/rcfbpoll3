@@ -1,62 +1,26 @@
-###########
-# BUILDER #
-###########
+FROM python:3.13-slim-bookworm AS builder
 
-# pull official base image
-FROM python:3.10.6-bullseye as builder
-
-# set work directory
 WORKDIR /usr/src/app
+COPY requirements.txt ./
+RUN python -m pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
-# set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+FROM python:3.13-slim-bookworm
 
-# install dependencies
-RUN pip install --upgrade pip
-COPY . .
-
-COPY ./requirements.txt .
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
-
-#########
-# FINAL #
-#########
-
-# pull official base image
-FROM python:3.10.6-bullseye
-
-RUN mkdir -p /home/app
-
-RUN addgroup --system app && adduser --system --ingroup app app
-
-# create the appropriate directories
-ENV HOME=/home/app
-ENV APP_HOME=/home/app/poll
-RUN mkdir $APP_HOME
-RUN mkdir $APP_HOME/static
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ENV HOME=/home/app APP_HOME=/home/app/poll
+RUN addgroup --system app && adduser --system --ingroup app app \
+    && mkdir -p "$APP_HOME/static"
 WORKDIR $APP_HOME
 
-RUN apt-get update && apt-get -y dist-upgrade
-RUN apt install -y netcat
+COPY --from=builder /wheels /wheels
+COPY requirements.txt ./
+RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
+    && rm -rf /wheels
 
-COPY --from=builder /usr/src/app/wheels /wheels
-COPY --from=builder /usr/src/app/requirements.txt .
-RUN pip install --no-cache /wheels/*
-
-# copy entrypoint.sh
-COPY ./entrypoint.sh .
-RUN sed -i 's/\r$//g'  $APP_HOME/entrypoint.sh
-RUN chmod +x  $APP_HOME/entrypoint.sh
-
-# copy project
-COPY . $APP_HOME
-
-# chown all the files to the app user
-RUN chown -R app:app $APP_HOME
-
-# change to the app user
+COPY entrypoint.sh ./
+RUN sed -i 's/\r$//g' entrypoint.sh && chmod +x entrypoint.sh
+COPY . .
+RUN chown -R app:app "$APP_HOME"
 USER app
 
-# run entrypoint.prod.sh
 ENTRYPOINT ["/home/app/poll/entrypoint.sh"]
