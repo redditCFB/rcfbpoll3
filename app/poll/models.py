@@ -249,3 +249,43 @@ class AboutPage(models.Model):
 
     def __str__(self):
         return self.page
+
+
+class RedditAccount(models.Model):
+    username = models.CharField(max_length=64, unique=True)
+    encrypted_refresh_token = models.TextField(editable=False)
+    granted_scopes = models.JSONField(default=list)
+    authorized_at = models.DateTimeField(null=True, blank=True)
+    last_verified_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return 'u/%s' % self.username
+
+    def set_refresh_token(self, refresh_token):
+        from .reddit_crypto import encrypt_refresh_token
+        self.encrypted_refresh_token = encrypt_refresh_token(refresh_token)
+
+    def has_scopes(self, scopes):
+        return set(scopes).issubset(set(self.granted_scopes or []))
+
+    @property
+    def assigned_roles(self):
+        return self.role_assignments.all()
+
+
+class RedditRoleAssignment(models.Model):
+    class Role(models.TextChoices):
+        NOTIFICATIONS = 'NOTIFICATIONS', 'Notifications'
+        APPLICATION_REVIEW = 'APPLICATION_REVIEW', 'Application review'
+        RESULTS_PUBLISHER = 'RESULTS_PUBLISHER', 'Results publisher'
+
+    role = models.CharField(max_length=32, choices=Role.choices, unique=True)
+    account = models.ForeignKey(RedditAccount, on_delete=models.CASCADE, related_name='role_assignments')
+
+    class Meta:
+        ordering = ('role',)
+
+    def __str__(self):
+        return '%s: u/%s' % (self.get_role_display(), self.account.username)

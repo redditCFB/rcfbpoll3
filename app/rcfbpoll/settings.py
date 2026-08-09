@@ -135,10 +135,11 @@ STATIC_ROOT = BASE_DIR / 'static'
 
 TEAM_LOGO_URL_TEMPLATE = os.environ.get('TEAM_LOGO_URL_TEMPLATE', 'https://cdn.redditcfb.com/60x40/cfb/{handle}.png')
 
-REDDIT_MESSAGE_CLIENT_ID = os.environ.get('REDDIT_MESSAGE_CLIENT_ID', '')
-REDDIT_MESSAGE_CLIENT_SECRET = os.environ.get('REDDIT_MESSAGE_CLIENT_SECRET', '')
-REDDIT_MESSAGE_REFRESH_TOKEN = os.environ.get('REDDIT_MESSAGE_REFRESH_TOKEN', '')
-REDDIT_MESSAGE_USER_AGENT = os.environ.get('REDDIT_MESSAGE_USER_AGENT', 'django:rcfbpoll:3.0 (by /u/CFB_Referee)')
+REDDIT_AUTOMATION_CLIENT_ID = os.environ.get('REDDIT_AUTOMATION_CLIENT_ID', '')
+REDDIT_AUTOMATION_CLIENT_SECRET = os.environ.get('REDDIT_AUTOMATION_CLIENT_SECRET', '')
+REDDIT_AUTOMATION_USER_AGENT = os.environ.get('REDDIT_AUTOMATION_USER_AGENT', 'django:rcfbpoll:3.0 (by /u/sirgippy)')
+REDDIT_AUTOMATION_REDIRECT_URI = os.environ.get('REDDIT_AUTOMATION_REDIRECT_URI', '')
+REDDIT_AUTOMATION_TOKEN_ENCRYPTION_KEY = os.environ.get('REDDIT_AUTOMATION_TOKEN_ENCRYPTION_KEY', '')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

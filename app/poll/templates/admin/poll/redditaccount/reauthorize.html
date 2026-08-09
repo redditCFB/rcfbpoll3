@@ -1,0 +1,8 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>Reauthorize <strong>u/{{ account.username }}</strong> for all currently assigned roles?</p>
+<form method="post">
+  {% csrf_token %}
+  <input type="submit" value="Continue to Reddit" class="default">
+</form>
+{% endblock %}
