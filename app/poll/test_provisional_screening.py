@@ -9,8 +9,10 @@ from django.utils import timezone
 from poll.admin import ApplicationAdmin
 from poll.models import ProvisionalUserApplication, User, UserRole
 from poll.provisional_screening import (
-    AccountAgeGate, GateStatus, normalize_username, screen_moderator_reference, screen_username,
+    AccountAgeGate, GateStatus, normalize_username,
+    screen_moderator_reference, screen_username,
 )
+from poll.provisional_screening_terms import BLOCKED_BIGOTRY_TERMS
 from poll.provisional_services import accept_provisional_application
 
 
@@ -59,6 +61,36 @@ class ScreeningGateTests(SimpleTestCase):
         self.assertEqual(screen_username('raccoon_fan').status, GateStatus.PASS)
         self.assertEqual(screen_username('spicy_username').status, GateStatus.PASS)
         self.assertEqual(screen_username('f_a_g').status, GateStatus.REVIEW)
+
+    def test_every_canonical_term_has_direct_review_coverage(self):
+        self.assertEqual(len(BLOCKED_BIGOTRY_TERMS), 42)
+        for blocked_term in BLOCKED_BIGOTRY_TERMS:
+            with self.subTest(term=blocked_term["value"]):
+                self.assertEqual(screen_username(blocked_term["value"]).status, GateStatus.REVIEW)
+
+    def test_short_component_terms_review_hostile_components_without_fuzzy_matching(self):
+        policy = {item["value"]: item for item in BLOCKED_BIGOTRY_TERMS}
+        for term in ('coon', 'dyke', 'fag', 'gook', 'gyppo', 'heeb', 'injun', 'kike',
+                     'lesbo', 'paki', 'retard', 'sambo', 'spaz', 'spic', 'squaw'):
+            with self.subTest(term=term):
+                self.assertEqual(screen_username(term + 'lord').status, GateStatus.REVIEW)
+                self.assertEqual(screen_username('lord' + term).status, GateStatus.REVIEW)
+                self.assertEqual(screen_username('f_a_g_lord' if term == 'fag' else term[0] + '_' + term[1:] + '_fan').status,
+                                 GateStatus.REVIEW)
+                self.assertFalse(policy[term].get("allow_fuzzy", False))
+
+    def test_lexical_collision_exceptions_remain_allowed(self):
+        for username in (
+                'raccoon_fan', 'raccoonlover', 'spicy_username', 'spice',
+                'pakistan', 'pakistani', 'pakistanfan', 'vandyke', 'vandyke_fan'):
+            with self.subTest(username=username):
+                self.assertEqual(screen_username(username).status, GateStatus.PASS)
+
+    def test_allowed_profanity_and_explicitly_excluded_terms(self):
+        for username in ('damn_user', 'shitposter', 'asshole42', 'fuck_bama',
+                         'queer_cfb_fan', 'redskins_history'):
+            with self.subTest(username=username):
+                self.assertEqual(screen_username(username).status, GateStatus.PASS)
 
     def test_account_age_gate_always_passes(self):
         self.assertEqual(AccountAgeGate().evaluate('any_name').status, GateStatus.PASS)

@@ -64,17 +64,17 @@ def _contains_conservative_fuzzy(candidate, term):
     return False
 
 
-def _contains_component(candidate, term, collision_words=()):
+def _contains_component(candidate, term, collision_prefixes=()):
     if candidate == term:
         return True
-    if candidate in collision_words:
+    if any(candidate.startswith(prefix) for prefix in collision_prefixes):
         return False
     return term in candidate
 
 
-def _contains_component_usage(username, normalized, term, collision_words=()):
+def _contains_component_usage(username, normalized, term, collision_prefixes=()):
     parts = [normalize_username(part) for part in re.split(r'[_-]+', username)]
-    if any(_contains_component(part, term, collision_words) for part in parts):
+    if any(_contains_component(part, term, collision_prefixes) for part in parts):
         return True
     return term in normalized and not any(term in part for part in parts)
 
@@ -85,7 +85,7 @@ def screen_username(username):
         term = blocked_term["value"]
         if blocked_term["match_mode"] == "component":
             if _contains_component_usage(
-                    username, normalized, term, blocked_term["collision_words"]):
+                    username, normalized, term, blocked_term["collision_prefixes"]):
                 return GateResult(GateStatus.REVIEW, ("bigoted_term",))
         elif term in normalized:
             return GateResult(GateStatus.REVIEW, ("bigoted_term",))
