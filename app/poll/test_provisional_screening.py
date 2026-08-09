@@ -82,7 +82,7 @@ class ScreeningGateTests(SimpleTestCase):
     def test_lexical_collision_exceptions_remain_allowed(self):
         for username in (
                 'raccoon_fan', 'raccoonlover', 'spicy_username', 'spice',
-                'pakistan', 'pakistani', 'pakistanfan', 'vandyke', 'vandyke_fan'):
+                'pakistan', 'pakistani', 'pakistanfan', 'pakistanifootball', 'vandyke', 'vandyke_fan', 'spicytakes'):
             with self.subTest(username=username):
                 self.assertEqual(screen_username(username).status, GateStatus.PASS)
 
