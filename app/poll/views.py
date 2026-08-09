@@ -15,6 +15,11 @@ from django.utils.text import slugify
 from .models import AboutPage, Ballot, BallotEntry, Poll, ProvisionalUserApplication, User, UserRole, Team
 from .utils import check_for_errors, check_for_warnings, get_outlier_analysis, get_result_set, get_results_comparison
 from .post_summary import cache_post_summary
+from .provisional_screening import screen_provisional_application
+from .provisional_services import accept_provisional_application
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def index(request):
@@ -520,6 +525,18 @@ def apply_for_provisional(request):
         user=this_user, submission_date=timezone.now(), status=ProvisionalUserApplication.Status.OPEN
     )
     new_app.save()
+    try:
+        result = screen_provisional_application(new_app)
+        new_app.screened_at = timezone.now()
+        new_app.screening_flags = list(result.flags)
+        new_app.save(update_fields=['screened_at', 'screening_flags'])
+        if result.all_pass:
+            accept_provisional_application(new_app, ProvisionalUserApplication.DecisionSource.AUTOMATIC)
+    except Exception:
+        logger.exception('Could not screen provisional application %s.', new_app.pk)
+        ProvisionalUserApplication.objects.filter(
+            pk=new_app.pk, status=ProvisionalUserApplication.Status.OPEN).update(
+            screened_at=timezone.now(), screening_flags=['screening_error'])
     return redirect('/my_ballots/')
 
 

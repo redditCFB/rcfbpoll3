@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Case, Count, Q, Value, When, IntegerField
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -12,6 +12,7 @@ from .models import (
     User, UserRole, UserSecondaryAffiliation, ProvisionalUserApplication, Team, Poll, Ballot, BallotEntry, ResultSet,
     Result, AboutPage, RedditAccount, RedditRoleAssignment
 )
+from .provisional_services import accept_provisional_application, reject_provisional_application
 
 
 class RoleInline(admin.TabularInline):
@@ -100,25 +101,24 @@ admin.site.register(User, UserAdmin)
 @admin.action(description='Accept selected applications')
 def accept_applications(model_admin, request, queryset):
     applications = list(queryset.filter(status=ProvisionalUserApplication.Status.OPEN))
+    decided = []
     for application in applications:
-        application.status = ProvisionalUserApplication.Status.ACCEPTED
-        application.save(update_fields=['status'])
-        role = UserRole(
-            user=application.user,
-            role=UserRole.Role.PROVISIONAL,
-            start_date=timezone.now()
-        )
-        role.save()
-    _send_decision_messages(model_admin, request, applications)
+        changed, _ = accept_provisional_application(
+            application, ProvisionalUserApplication.DecisionSource.MANUAL, notify=False)
+        if changed:
+            decided.append(application)
+    _send_decision_messages(model_admin, request, decided)
 
 
 @admin.action(description='Reject selected applications')
 def reject_applications(model_admin, request, queryset):
     applications = list(queryset.filter(status=ProvisionalUserApplication.Status.OPEN))
+    decided = []
     for application in applications:
-        application.status = ProvisionalUserApplication.Status.REJECTED
-        application.save(update_fields=['status'])
-    _send_decision_messages(model_admin, request, applications)
+        changed, _ = reject_provisional_application(application, notify=False)
+        if changed:
+            decided.append(application)
+    _send_decision_messages(model_admin, request, decided)
 
 
 def _send_decision_messages(model_admin, request, applications):
@@ -133,10 +133,30 @@ def _send_decision_messages(model_admin, request, applications):
 
 
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display = ('user', 'user_page', 'submission_date', 'status')
+    list_display = ('user', 'user_page', 'submission_date', 'status', 'screening_summary', 'decision_source')
     list_filter = ['status']
     actions = [accept_applications, reject_applications]
     ordering = ['-submission_date']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(
+            open_first=Case(
+                When(status=ProvisionalUserApplication.Status.OPEN, then=Value(0)),
+                default=Value(1), output_field=IntegerField(),
+            )
+        ).order_by('open_first', '-submission_date')
+
+    @admin.display(description='Screening')
+    def screening_summary(self, application):
+        if not application.screened_at:
+            return 'Not screened'
+        labels = {
+            'bigoted_term': 'Username review',
+            'moderator_reference': 'Moderator reference',
+            'moderator_list_unavailable': 'Moderator list unavailable',
+            'screening_error': 'Screening error',
+        }
+        return ', '.join(labels.get(flag, flag) for flag in application.screening_flags) or 'Auto-pass'
 
 
 admin.site.register(ProvisionalUserApplication, ApplicationAdmin)

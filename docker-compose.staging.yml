@@ -48,7 +48,7 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile.prod
-    command: sh -c 'python manage.py migrate --noinput && python manage.py update_team_logo_handles'
+    command: sh -c 'python manage.py migrate --noinput && python manage.py update_team_logo_handles && python manage.py screen_open_provisional_applications'
     env_file:
       - ./.env.staging
     depends_on:
