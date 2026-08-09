@@ -64,12 +64,32 @@ def _contains_conservative_fuzzy(candidate, term):
     return False
 
 
+def _contains_component(candidate, term, collision_words=()):
+    if candidate == term:
+        return True
+    if candidate in collision_words:
+        return False
+    return term in candidate
+
+
+def _contains_component_usage(username, normalized, term, collision_words=()):
+    parts = [normalize_username(part) for part in re.split(r'[_-]+', username)]
+    if any(_contains_component(part, term, collision_words) for part in parts):
+        return True
+    return term in normalized and not any(term in part for part in parts)
+
+
 def screen_username(username):
     normalized = normalize_username(username)
-    for term in BLOCKED_BIGOTRY_TERMS:
-        value = term["value"]
-        direct_match = value in normalized if term["allow_substring"] else normalized == value
-        if direct_match or (term["allow_fuzzy"] and _contains_conservative_fuzzy(normalized, value)):
+    for blocked_term in BLOCKED_BIGOTRY_TERMS:
+        term = blocked_term["value"]
+        if blocked_term["match_mode"] == "component":
+            if _contains_component_usage(
+                    username, normalized, term, blocked_term["collision_words"]):
+                return GateResult(GateStatus.REVIEW, ("bigoted_term",))
+        elif term in normalized:
+            return GateResult(GateStatus.REVIEW, ("bigoted_term",))
+        elif blocked_term.get("allow_fuzzy") and _contains_conservative_fuzzy(normalized, term):
             return GateResult(GateStatus.REVIEW, ("bigoted_term",))
     return GateResult(GateStatus.PASS)
 

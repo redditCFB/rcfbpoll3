@@ -53,7 +53,7 @@ class ScreeningGateTests(SimpleTestCase):
     def test_bigotry_policy_allows_profanity_and_handles_edits(self):
         for username in ('damn_user', 'shitposter', 'asshole42'):
             self.assertEqual(screen_username(username).status, GateStatus.PASS)
-        for username in ('n_i_g_g_e_r', 'n1gg3r', 'niggor', 'niger', 'niggher'):
+        for username in ('n_i_g_g_e_r', 'n1gg3r', 'niggor', 'niger', 'niggher', 'faglord', 'lordfag', 'f_a_g_lord', 'lord_f_a_g'):
             self.assertEqual(screen_username(username).status, GateStatus.REVIEW)
         self.assertEqual(screen_username('scunthorpe').status, GateStatus.PASS)
         self.assertEqual(screen_username('raccoon_fan').status, GateStatus.PASS)
