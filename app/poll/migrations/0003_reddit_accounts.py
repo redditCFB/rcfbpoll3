@@ -3,7 +3,7 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-    dependencies = [('poll', '0001_poll_required')]
+    dependencies = [('poll', '0002_poll_required')]
 
     operations = [
         migrations.CreateModel(

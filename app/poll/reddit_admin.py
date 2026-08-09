@@ -1,7 +1,9 @@
+import logging
 import secrets
 
 from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -14,6 +16,7 @@ from .reddit_integration import RedditIntegrationError, oauth_client, required_s
 
 
 PENDING_OAUTH_SESSION_KEY = 'reddit_automation_oauth'
+logger = logging.getLogger(__name__)
 
 
 def _superuser_required(request):
@@ -107,6 +110,12 @@ class RedditAccountAdmin(admin.ModelAdmin):
         if not roles:
             messages.error(request, 'Assign at least one role before reauthorizing this account.')
             return redirect('admin:poll_redditaccount_changelist')
+        if request.method != 'POST':
+            context = {
+                **self.admin_site.each_context(request), 'title': 'Reauthorize Reddit account',
+                'account': account, 'opts': self.model._meta,
+            }
+            return TemplateResponse(request, 'admin/poll/redditaccount/reauthorize.html', context)
         return self._start_oauth(request, roles, account_id=account.pk)
 
     def oauth_callback(self, request):
@@ -125,28 +134,46 @@ class RedditAccountAdmin(admin.ModelAdmin):
         try:
             client = oauth_client()
             refresh_token = client.auth.authorize(code)
+            if not refresh_token:
+                raise RedditIntegrationError('Reddit did not return a refresh token.')
             identity = client.user.me()
             if identity is None or not getattr(identity, 'name', None):
                 raise RedditIntegrationError('Reddit did not return an authenticated account identity.')
-            scopes = set(client.auth.scopes()) if callable(getattr(client.auth, 'scopes', None)) else set()
+            scopes_method = getattr(client.auth, 'scopes', None)
+            if not callable(scopes_method):
+                raise RedditIntegrationError('Reddit did not return the granted OAuth scopes.')
+            scopes = set(scopes_method())
             if not scopes:
-                scopes = set(required_scopes_for_roles(pending['roles']))
+                raise RedditIntegrationError('Reddit did not return the granted OAuth scopes.')
+            missing = required_scopes_for_roles(pending['roles']) - scopes
+            if missing:
+                raise RedditIntegrationError(
+                    'Reddit authorization is missing required scope(s): %s.' % ', '.join(sorted(missing))
+                )
             account = RedditAccount.objects.filter(pk=pending.get('account_id')).first() if pending.get('account_id') else None
             if account and account.username.lower() != identity.name.lower():
                 raise RedditIntegrationError('Reauthorization authenticated a different Reddit account.')
             if account is None:
-                account, _ = RedditAccount.objects.get_or_create(username=identity.name)
-            account.set_refresh_token(refresh_token)
-            account.granted_scopes = sorted(scopes)
-            account.authorized_at = timezone.now()
-            account.last_verified_at = timezone.now()
-            account.save()
-            for role in pending['roles']:
-                RedditRoleAssignment.objects.update_or_create(role=role, defaults={'account': account})
+                account = RedditAccount.objects.filter(username__iexact=identity.name).first()
+                if account is not None:
+                    raise RedditIntegrationError(
+                        'u/%s is already connected. Use that account\'s Reauthorize action instead.' % account.username
+                    )
+            with transaction.atomic():
+                if account is None:
+                    account = RedditAccount(username=identity.name)
+                account.set_refresh_token(refresh_token)
+                account.granted_scopes = sorted(scopes)
+                account.authorized_at = timezone.now()
+                account.last_verified_at = timezone.now()
+                account.save()
+                for role in pending['roles']:
+                    RedditRoleAssignment.objects.update_or_create(role=role, defaults={'account': account})
         except RedditIntegrationError as exc:
             messages.error(request, str(exc))
             return redirect('admin:poll_redditaccount_changelist')
         except Exception:
+            logger.exception('Unexpected Reddit automation OAuth callback failure.')
             messages.error(request, 'Reddit authorization could not be completed.')
             return redirect('admin:poll_redditaccount_changelist')
         messages.success(request, 'Connected as u/%s.' % account.username)
@@ -158,6 +185,9 @@ class RedditRoleAssignmentAdmin(admin.ModelAdmin):
     list_filter = ('role',)
 
     def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_add_permission(self, request):
         return request.user.is_superuser
 
     def has_view_permission(self, request, obj=None):

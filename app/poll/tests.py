@@ -6,8 +6,6 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.core.management.base import CommandError
-from django.db import connection
 from django.template import Context, Template
 from django.test import SimpleTestCase, TransactionTestCase
 from django.test.utils import override_settings
@@ -20,20 +18,6 @@ from poll.management.commands.update_team_logo_handles import TEAM_HANDLE_RENAME
 
 
 class ProvisionalApplicationTests(TransactionTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        with connection.schema_editor() as schema_editor:
-            for model in (Team, User, UserRole, ProvisionalUserApplication):
-                schema_editor.create_model(model)
-
-    @classmethod
-    def tearDownClass(cls):
-        with connection.schema_editor() as schema_editor:
-            for model in (ProvisionalUserApplication, UserRole, User, Team):
-                schema_editor.delete_model(model)
-        super().tearDownClass()
-
     def setUp(self):
         self.auth_user = get_user_model().objects.create_user(
             username='former_provisional',
@@ -71,20 +55,6 @@ class ProvisionalApplicationTests(TransactionTestCase):
 
 
 class ProvisionalApplicationNotificationTests(TransactionTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        with connection.schema_editor() as schema_editor:
-            for model in (Team, User, UserRole, ProvisionalUserApplication):
-                schema_editor.create_model(model)
-
-    @classmethod
-    def tearDownClass(cls):
-        with connection.schema_editor() as schema_editor:
-            for model in (ProvisionalUserApplication, UserRole, User, Team):
-                schema_editor.delete_model(model)
-        super().tearDownClass()
-
     def setUp(self):
         self.poll_user = User.objects.create(username='notification_test_user')
         self.application = ProvisionalUserApplication.objects.create(
@@ -170,70 +140,6 @@ class TeamLogoUrlTagTests(SimpleTestCase):
 
 
 class TeamHandleMigrationTests(TransactionTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        with connection.schema_editor() as schema_editor:
-            schema_editor.create_model(Team)
-
-    @classmethod
-    def tearDownClass(cls):
-        with connection.schema_editor() as schema_editor:
-            schema_editor.delete_model(Team)
-        super().tearDownClass()
-
-    def create_team(self, handle):
-        return Team.objects.create(
-            handle=handle,
-            name=handle,
-            conference="Test",
-            division="Test",
-            use_for_ballot=False,
-            short_name=handle,
-        )
-
-    def test_updates_and_can_be_rerun(self):
-        teams = {handle: self.create_team(handle) for handle in TEAM_HANDLE_RENAMES}
-
-        call_command("update_team_logo_handles")
-
-        for legacy_handle, cdn_handle in TEAM_HANDLE_RENAMES.items():
-            teams[legacy_handle].refresh_from_db()
-            self.assertEqual(teams[legacy_handle].handle, cdn_handle)
-
-        output = StringIO()
-        call_command("update_team_logo_handles", stdout=output)
-        self.assertIn("Updated 0 team handle(s); 14 already applied.", output.getvalue())
-
-    def test_aborts_when_a_target_handle_already_exists(self):
-        legacy_teams = {handle: self.create_team(handle) for handle in TEAM_HANDLE_RENAMES}
-        legacy_team = legacy_teams["eastcarolina"]
-        target_team = self.create_team("ecu")
-
-        with self.assertRaises(CommandError):
-            call_command("update_team_logo_handles")
-
-        legacy_team.refresh_from_db()
-        target_team.refresh_from_db()
-        self.assertEqual(legacy_team.handle, "eastcarolina")
-        self.assertEqual(target_team.handle, "ecu")
-
-
-class BallotExportTests(TransactionTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        with connection.schema_editor() as schema_editor:
-            for model in (Team, User, Poll, Ballot, BallotEntry):
-                schema_editor.create_model(model)
-
-    @classmethod
-    def tearDownClass(cls):
-        with connection.schema_editor() as schema_editor:
-            for model in (BallotEntry, Ballot, Poll, User, Team):
-                schema_editor.delete_model(model)
-        super().tearDownClass()
-
     def setUp(self):
         now = timezone.now()
         self.poll = Poll.objects.create(

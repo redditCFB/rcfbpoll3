@@ -3,7 +3,6 @@ from io import BytesIO
 import tempfile
 from unittest.mock import patch
 
-from django.db import connection
 from django.test import RequestFactory, TransactionTestCase, override_settings
 from django.utils import timezone
 from PIL import Image
@@ -14,20 +13,6 @@ from poll.post_summary import cache_post_summary
 
 
 class PostSummaryImageTests(TransactionTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        with connection.schema_editor() as schema_editor:
-            for model in (Team, User, Poll, Ballot, BallotEntry, ResultSet, Result):
-                schema_editor.create_model(model)
-
-    @classmethod
-    def tearDownClass(cls):
-        with connection.schema_editor() as schema_editor:
-            for model in (Result, ResultSet, BallotEntry, Ballot, Poll, Team, User):
-                schema_editor.delete_model(model)
-        super().tearDownClass()
-
     def setUp(self):
         now = timezone.now()
         self.poll = Poll.objects.create(

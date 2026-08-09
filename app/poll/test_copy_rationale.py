@@ -1,7 +1,6 @@
 from datetime import timedelta
 from types import SimpleNamespace
 
-from django.db import connection
 from django.test import RequestFactory, TransactionTestCase
 from django.utils import timezone
 
@@ -10,20 +9,6 @@ from poll.models import Ballot, BallotEntry, Poll, Team, User, UserRole
 
 
 class CopyPreviousRationaleTests(TransactionTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        with connection.schema_editor() as schema_editor:
-            for model in (Team, User, Poll, Ballot, BallotEntry):
-                schema_editor.create_model(model)
-
-    @classmethod
-    def tearDownClass(cls):
-        with connection.schema_editor() as schema_editor:
-            for model in (BallotEntry, Ballot, Poll, User, Team):
-                schema_editor.delete_model(model)
-        super().tearDownClass()
-
     def setUp(self):
         now = timezone.now()
         self.poll = Poll.objects.create(
