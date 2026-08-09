@@ -99,7 +99,6 @@ class ProvisionalApplicationNotificationTests(TransactionTestCase):
         self.assertFalse(send_provisional_application_decision_message(self.application))
         reddit_client.assert_called_once_with('NOTIFICATIONS')
 
-
     @patch('poll.admin.send_provisional_application_decision_message', return_value=True)
     def test_admin_acceptance_decides_open_applications_once_and_notifies(self, send_message):
         already_accepted = ProvisionalUserApplication.objects.create(
@@ -123,7 +122,6 @@ class ProvisionalApplicationNotificationTests(TransactionTestCase):
         self.application.refresh_from_db()
         self.assertEqual(self.application.status, ProvisionalUserApplication.Status.REJECTED)
         send_message.assert_called_once_with(self.application)
-
 
 
 class TeamLogoUrlTagTests(SimpleTestCase):

@@ -70,6 +70,7 @@ class RedditOAuthFlowTests(SimpleTestCase):
     @patch('poll.reddit_admin.oauth_client')
     def test_connect_requests_permanent_union_scopes_and_tracks_state(self, oauth_client):
         request = Mock()
+
         class Session(dict):
             modified = False
         request.session = Session()

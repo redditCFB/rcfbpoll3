@@ -2,19 +2,30 @@ from django.db import migrations, models
 
 
 def mark_required_polls(apps, schema_editor):
-    Poll = apps.get_model('poll', 'Poll')
-    Poll.objects.all().update(required=False)
-    for year in Poll.objects.values_list('year', flat=True).distinct():
-        week_four = Poll.objects.filter(year=year, week__iexact='week 4').order_by('-close_date').first()
-        if week_four is not None:
-            cutoff = week_four.close_date
-        else:
-            candidates = list(
-                Poll.objects.filter(year=year).exclude(week__iexact='preseason').order_by('close_date')[:4]
-            )
-            cutoff = candidates[3].close_date if len(candidates) == 4 else None
-        if cutoff is not None:
-            Poll.objects.filter(year=year, close_date__gte=cutoff).update(required=True)
+    schema_editor.execute("""
+        UPDATE poll_poll SET required = FALSE;
+        WITH season_cutoff AS (
+            SELECT seasons.year,
+                COALESCE(
+                    MAX(seasons.close_date) FILTER (WHERE lower(trim(seasons.week)) = 'week 4'),
+                    (
+                        SELECT candidate.close_date
+                        FROM poll_poll AS candidate
+                        WHERE candidate.year = seasons.year
+                          AND lower(trim(candidate.week)) <> 'preseason'
+                        ORDER BY candidate.close_date
+                        OFFSET 3 LIMIT 1
+                    )
+                ) AS close_date
+            FROM poll_poll AS seasons
+            GROUP BY seasons.year
+        )
+        UPDATE poll_poll AS poll
+        SET required = TRUE
+        FROM season_cutoff
+        WHERE poll.year = season_cutoff.year
+          AND poll.close_date >= season_cutoff.close_date;
+    """)
 
 
 def unmark_required_polls(apps, schema_editor):
