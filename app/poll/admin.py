@@ -7,9 +7,10 @@ from django.urls import path, reverse
 from django.utils import timezone
 
 from .notifications import send_provisional_application_decision_message
+from .reddit_admin import RedditAccountAdmin, RedditRoleAssignmentAdmin
 from .models import (
     User, UserRole, UserSecondaryAffiliation, ProvisionalUserApplication, Team, Poll, Ballot, BallotEntry, ResultSet,
-    Result, AboutPage
+    Result, AboutPage, RedditAccount, RedditRoleAssignment
 )
 
 
@@ -196,3 +197,5 @@ class ResultSetAdmin(admin.ModelAdmin):
 
 admin.site.register(ResultSet, ResultSetAdmin)
 admin.site.register(AboutPage)
+admin.site.register(RedditAccount, RedditAccountAdmin)
+admin.site.register(RedditRoleAssignment, RedditRoleAssignmentAdmin)
