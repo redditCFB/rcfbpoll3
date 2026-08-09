@@ -103,10 +103,10 @@ def accept_applications(model_admin, request, queryset):
     applications = list(queryset.filter(status=ProvisionalUserApplication.Status.OPEN))
     decided = []
     for application in applications:
-        changed, _ = accept_provisional_application(
+        changed, updated_application, _ = accept_provisional_application(
             application, ProvisionalUserApplication.DecisionSource.MANUAL, notify=False)
         if changed:
-            decided.append(application)
+            decided.append(updated_application)
     _send_decision_messages(model_admin, request, decided)
 
 
@@ -115,9 +115,9 @@ def reject_applications(model_admin, request, queryset):
     applications = list(queryset.filter(status=ProvisionalUserApplication.Status.OPEN))
     decided = []
     for application in applications:
-        changed, _ = reject_provisional_application(application, notify=False)
+        changed, updated_application, _ = reject_provisional_application(application, notify=False)
         if changed:
-            decided.append(application)
+            decided.append(updated_application)
     _send_decision_messages(model_admin, request, decided)
 
 

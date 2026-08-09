@@ -54,19 +54,23 @@ def _levenshtein_at_most(left, right, maximum=1):
 def _contains_conservative_fuzzy(candidate, term):
     if len(term) < 6:
         return False
-    for start in range(max(1, len(candidate) - len(term) + 1)):
-        window = candidate[start:start + len(term)]
-        if len(window) == len(term) and _levenshtein_at_most(window, term):
-            return True
+    for window_length in {len(term) - 1, len(term), len(term) + 1}:
+        if window_length < 1 or window_length > len(candidate):
+            continue
+        for start in range(len(candidate) - window_length + 1):
+            window = candidate[start:start + window_length]
+            if _levenshtein_at_most(window, term):
+                return True
     return False
 
 
 def screen_username(username):
     normalized = normalize_username(username)
-    if any(term in normalized for term in BLOCKED_BIGOTRY_TERMS):
-        return GateResult(GateStatus.REVIEW, ('bigoted_term',))
-    if any(_contains_conservative_fuzzy(normalized, term) for term in BLOCKED_BIGOTRY_TERMS):
-        return GateResult(GateStatus.REVIEW, ('bigoted_term',))
+    for term in BLOCKED_BIGOTRY_TERMS:
+        value = term["value"]
+        direct_match = value in normalized if term["allow_substring"] else normalized == value
+        if direct_match or (term["allow_fuzzy"] and _contains_conservative_fuzzy(normalized, value)):
+            return GateResult(GateStatus.REVIEW, ("bigoted_term",))
     return GateResult(GateStatus.PASS)
 
 
@@ -96,14 +100,16 @@ def screen_moderator_reference(username, provider=None):
     try:
         moderator_names = (provider or EnvironmentModeratorProvider()).usernames()
     except ModeratorListUnavailable:
-        return GateResult(GateStatus.ERROR, ('moderator_list_unavailable',))
+        return GateResult(GateStatus.ERROR, ("moderator_list_unavailable",))
     normalized = normalize_username(username)
     for moderator_name in moderator_names:
         moderator = normalize_username(moderator_name)
-        if len(moderator) >= 5 and (moderator == normalized or moderator in normalized):
-            return GateResult(GateStatus.REVIEW, ('moderator_reference',))
+        if moderator == normalized:
+            return GateResult(GateStatus.REVIEW, ("moderator_reference",))
+        if len(moderator) >= 5 and moderator in normalized:
+            return GateResult(GateStatus.REVIEW, ("moderator_reference",))
         if len(moderator) >= 8 and _contains_conservative_fuzzy(normalized, moderator):
-            return GateResult(GateStatus.REVIEW, ('moderator_reference',))
+            return GateResult(GateStatus.REVIEW, ("moderator_reference",))
     return GateResult(GateStatus.PASS)
 
 

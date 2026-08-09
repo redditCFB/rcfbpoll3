@@ -24,7 +24,7 @@ class Command(BaseCommand):
                 application.save(update_fields=['screened_at', 'screening_flags'])
                 evaluated += 1
                 if result.all_pass:
-                    changed, notified = accept_provisional_application(
+                    changed, _, notified = accept_provisional_application(
                         application, ProvisionalUserApplication.DecisionSource.AUTOMATIC)
                     accepted += int(changed)
                     notification_failures += int(changed and not notified)

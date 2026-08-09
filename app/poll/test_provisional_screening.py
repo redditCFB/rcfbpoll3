@@ -37,6 +37,29 @@ class ScreeningGateTests(SimpleTestCase):
         with patch.dict('os.environ', {'RCFB_MODERATOR_USERNAMES': 'bad name'}, clear=False):
             self.assertEqual(screen_moderator_reference('safe_name').status, GateStatus.ERROR)
 
+    def test_moderator_length_and_fuzzy_policy(self):
+        class Provider:
+            def usernames(self):
+                return ('LongCurrentMod', 'bob')
+
+        self.assertEqual(screen_moderator_reference('bob', Provider()).status, GateStatus.REVIEW)
+        self.assertEqual(screen_moderator_reference('bobcat', Provider()).status, GateStatus.PASS)
+        self.assertEqual(screen_moderator_reference('longcurrentmod', Provider()).status, GateStatus.REVIEW)
+        self.assertEqual(screen_moderator_reference('long-current-mod-fan', Provider()).status, GateStatus.REVIEW)
+        self.assertEqual(screen_moderator_reference('longcurrntmod', Provider()).status, GateStatus.REVIEW)
+        self.assertEqual(screen_moderator_reference('longcurrentxmod', Provider()).status, GateStatus.REVIEW)
+        self.assertEqual(screen_moderator_reference('longcurrentmodd', Provider()).status, GateStatus.REVIEW)
+
+    def test_bigotry_policy_allows_profanity_and_handles_edits(self):
+        for username in ('damn_user', 'shitposter', 'asshole42'):
+            self.assertEqual(screen_username(username).status, GateStatus.PASS)
+        for username in ('n_i_g_g_e_r', 'n1gg3r', 'niggor', 'niger', 'niggher'):
+            self.assertEqual(screen_username(username).status, GateStatus.REVIEW)
+        self.assertEqual(screen_username('scunthorpe').status, GateStatus.PASS)
+        self.assertEqual(screen_username('raccoon_fan').status, GateStatus.PASS)
+        self.assertEqual(screen_username('spicy_username').status, GateStatus.PASS)
+        self.assertEqual(screen_username('f_a_g').status, GateStatus.REVIEW)
+
     def test_account_age_gate_always_passes(self):
         self.assertEqual(AccountAgeGate().evaluate('any_name').status, GateStatus.PASS)
 
@@ -50,7 +73,7 @@ class AcceptanceServiceTests(TransactionTestCase):
 
     @patch('poll.provisional_services.send_provisional_application_decision_message', return_value=False)
     def test_acceptance_is_saved_once_when_notification_fails(self, notify):
-        accepted, notified = accept_provisional_application(
+        accepted, updated, notified = accept_provisional_application(
             self.application, ProvisionalUserApplication.DecisionSource.AUTOMATIC,
         )
         self.assertTrue(accepted)
@@ -60,7 +83,7 @@ class AcceptanceServiceTests(TransactionTestCase):
         self.assertEqual(self.application.decision_source, ProvisionalUserApplication.DecisionSource.AUTOMATIC)
         self.assertEqual(UserRole.objects.filter(
             user=self.user, role=UserRole.Role.PROVISIONAL, end_date__isnull=True).count(), 1)
-        accepted_again, _ = accept_provisional_application(
+        accepted_again, _, _ = accept_provisional_application(
             self.application, ProvisionalUserApplication.DecisionSource.AUTOMATIC,
         )
         self.assertFalse(accepted_again)
@@ -111,6 +134,7 @@ class SubmissionAndCommandTests(TransactionTestCase):
         self.assertIn('automatically accepted: 1', output.getvalue())
         self.assertEqual(ProvisionalUserApplication.objects.filter(status=ProvisionalUserApplication.Status.ACCEPTED).count(), 2)
         notify.assert_called_once()
+
 
 class AdminOrderingTests(TransactionTestCase):
     def test_open_applications_precede_decided_and_each_group_is_newest_first(self):
