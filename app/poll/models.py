@@ -47,9 +47,16 @@ class ProvisionalUserApplication(models.Model):
         ACCEPTED = 2, "Accepted"
         REJECTED = 3, "Rejected"
 
+    class DecisionSource(models.TextChoices):
+        MANUAL = "MANUAL", "Manual"
+        AUTOMATIC = "AUTOMATIC", "Automatic"
+
     user = models.ForeignKey('User', on_delete=models.CASCADE)
     submission_date = models.DateTimeField()
     status = models.IntegerField(choices=Status.choices)
+    decision_source = models.CharField(max_length=20, choices=DecisionSource.choices, blank=True, null=True)
+    screening_flags = models.JSONField(default=list)
+    screened_at = models.DateTimeField(blank=True, null=True)
 
     @admin.display(description='User Page')
     def user_page(self):

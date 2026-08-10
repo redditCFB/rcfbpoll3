@@ -2,7 +2,7 @@ import csv
 from datetime import timedelta
 from io import StringIO
 import json
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -122,6 +122,48 @@ class ProvisionalApplicationNotificationTests(TransactionTestCase):
         self.application.refresh_from_db()
         self.assertEqual(self.application.status, ProvisionalUserApplication.Status.REJECTED)
         send_message.assert_called_once_with(self.application)
+
+
+class ProvisionalAdminRealNotificationTests(TransactionTestCase):
+    def setUp(self):
+        self.poll_user = User.objects.create(username='real_admin_notification_user')
+        self.application = ProvisionalUserApplication.objects.create(
+            user=self.poll_user, submission_date=timezone.now(),
+            status=ProvisionalUserApplication.Status.OPEN,
+        )
+        self.model_admin = Mock()
+        self.request = Mock()
+
+    @patch('poll.notifications.reddit_client_for_role')
+    def test_admin_accept_uses_updated_application_for_real_message(self, reddit_client):
+        accept_applications(self.model_admin, self.request,
+                            ProvisionalUserApplication.objects.filter(pk=self.application.pk))
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, ProvisionalUserApplication.Status.ACCEPTED)
+        subject, body = reddit_client.return_value.redditor.return_value.message.call_args.args
+        self.assertEqual(subject, 'Your r/CFB Poll provisional voter application was approved')
+        self.assertIn('submit provisional ballots', body)
+        self.model_admin.message_user.assert_not_called()
+
+    @patch('poll.notifications.reddit_client_for_role')
+    def test_admin_reject_uses_updated_application_for_real_message(self, reddit_client):
+        reject_applications(self.model_admin, self.request,
+                            ProvisionalUserApplication.objects.filter(pk=self.application.pk))
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, ProvisionalUserApplication.Status.REJECTED)
+        subject, body = reddit_client.return_value.redditor.return_value.message.call_args.args
+        self.assertEqual(subject, 'Your r/CFB Poll provisional voter application was not approved')
+        self.assertIn('Thank you for your interest', body)
+        self.model_admin.message_user.assert_not_called()
+
+    @patch('poll.notifications.reddit_client_for_role', side_effect=RuntimeError('transport down'))
+    def test_admin_notification_failure_keeps_decision_and_warns(self, reddit_client):
+        accept_applications(self.model_admin, self.request,
+                            ProvisionalUserApplication.objects.filter(pk=self.application.pk))
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, ProvisionalUserApplication.Status.ACCEPTED)
+        self.model_admin.message_user.assert_called_once()
+        self.assertEqual(self.model_admin.message_user.call_args.kwargs['level'], 'warning')
 
 
 class TeamLogoUrlTagTests(SimpleTestCase):

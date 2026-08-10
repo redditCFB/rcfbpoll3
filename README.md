@@ -2,6 +2,20 @@
 
 r/CFB Poll Top 25 Site Re-Rebuild
 
+## Provisional application screening
+
+The deployment environment should provide RCFB_MODERATOR_USERNAMES as a
+comma-separated list of the current r/CFB moderator usernames, for example
+sample_mod_one,sample_mod_two. Auto-accept fails closed when this setting is
+missing or malformed. The environment-backed provider is intentionally a seam
+for a future dynamic moderator lookup.
+
+After migrations, the production deployment's migrate service runs
+screen_open_provisional_applications to reconsider existing OPEN applications.
+The file docker-compose.staging.yml is currently the real production
+deployment despite its name.
+
+
 ## Local development
 
 A fresh clone can start a usable local copy, populated with a sanitized poll
