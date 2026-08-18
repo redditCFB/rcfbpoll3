@@ -28,7 +28,7 @@ def _decode(contents):
 
 def _parse_csv(contents, teams):
     try:
-        reader = csv.DictReader(io.StringIO(_decode(contents), newline=''))
+        reader = csv.DictReader(io.StringIO(_decode(contents), newline=''), strict=True)
         if reader.fieldnames != ['rank', 'team_handle']:
             raise BallotImportError('CSV must have exactly these columns: rank, team_handle.')
         entries = []
@@ -68,7 +68,7 @@ def _parse_json(contents, teams):
                 raise BallotImportError(f'JSON entry {number} is missing {field}.')
         if 'rationale' in raw_entry and not isinstance(raw_entry['rationale'], str):
             raise BallotImportError(f'JSON entry {number} rationale must be a string.')
-        entry = _entry(raw_entry['rank'], raw_entry['team_handle'], number, teams)
+        entry = _entry(raw_entry['rank'], raw_entry['team_handle'], number, teams, strict_integer=True)
         entry['rationale_supplied'] = 'rationale' in raw_entry
         if entry['rationale_supplied']:
             entry['rationale'] = raw_entry['rationale']
@@ -83,8 +83,11 @@ def _parse_json(contents, teams):
     }
 
 
-def _entry(rank, handle, row_number, teams):
-    if not isinstance(rank, int) or isinstance(rank, bool):
+def _entry(rank, handle, row_number, teams, strict_integer=False):
+    if strict_integer:
+        if not isinstance(rank, int) or isinstance(rank, bool):
+            raise BallotImportError(f'Row {row_number} rank must be an integer.')
+    else:
         try:
             rank = int(rank)
         except (TypeError, ValueError) as exc:

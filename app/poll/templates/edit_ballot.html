@@ -15,7 +15,23 @@
                     <div class="col-md-4"><button class="btn btn-secondary" type="submit">Import ballot</button></div>
                 </form>
                 <div class="collapse mt-3" id="import-help">
-                    <p>CSV must contain exactly <code>rank,team_handle</code>. JSON must contain an <code>entries</code> array; optional fields are <code>poll_type</code> (<code>human</code>, <code>computer</code>, or <code>hybrid</code>), <code>overall_rationale</code>, and per-entry <code>rationale</code>. The import replaces rankings but does not submit the ballot.</p>
+                    <p>Upload a UTF-8 CSV or JSON file containing ranks 1 through 25 exactly once. <code>rank</code> and <code>team_handle</code> are required. JSON <code>poll_type</code>, <code>overall_rationale</code>, and each entry's <code>rationale</code> are optional; poll types are <code>human</code>, <code>computer</code>, and <code>hybrid</code>. The import replaces rankings but does not submit the ballot.</p>
+                    <details class="mb-2"><summary>CSV example</summary><pre class="bg-light p-2 mb-0"><code>rank,team_handle
+1,example-handle
+2,another-handle
+...
+25,last-handle</code></pre></details>
+                    <details class="mb-2"><summary>JSON example</summary><pre class="bg-light p-2 mb-0"><code>{
+  "poll_type": "computer",
+  "overall_rationale": "Optional methodology",
+  "entries": [
+    {
+      "rank": 1,
+      "team_handle": "example-handle",
+      "rationale": "Optional team rationale"
+    }
+  ]
+}</code></pre></details>
                     <p class="mb-1"><strong>Valid team handles for this ballot:</strong></p>
                     <div class="border rounded p-2" style="max-height: 12rem; overflow-y: auto;">
                         {% for handle, team in teams.items %}<div><code>{{ handle }}</code> &mdash; {{ team.name }}</div>{% endfor %}
