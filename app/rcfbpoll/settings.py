@@ -131,7 +131,10 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'static'
 
-if not DEBUG:
+# Manifest storage requires collectstatic to have run first. Keep the default
+# storage during Django's test command so templates can render without a
+# pre-populated production static directory.
+if not DEBUG and os.environ.get('DJANGO_TESTING') != '1':
     STORAGES = {
         'default': {
             'BACKEND': 'django.core.files.storage.FileSystemStorage',
