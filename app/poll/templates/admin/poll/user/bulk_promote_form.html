@@ -1,0 +1,23 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div id="content-main">
+  <p>Paste Reddit usernames separated by commas or line breaks. Whitespace is ignored and duplicate names are processed once. Enter usernames without the leading <code>u/</code>.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <fieldset class="module aligned">
+      <div class="form-row field-usernames">
+        <div>
+          {{ form.usernames.errors }}
+          {{ form.usernames.label_tag }}
+          {{ form.usernames }}
+          {% if form.usernames.help_text %}<div class="help">{{ form.usernames.help_text }}</div>{% endif %}
+        </div>
+      </div>
+    </fieldset>
+    <div class="submit-row">
+      <input type="submit" value="Preview promotions" class="default">
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,11 +1,9 @@
 import csv
 from datetime import timedelta
-from io import StringIO
 import json
 from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
-from django.core.management import call_command
 from django.template import Context, Template
 from django.test import SimpleTestCase, TransactionTestCase
 from django.test.utils import override_settings
@@ -14,7 +12,6 @@ from django.utils import timezone
 from poll.admin import accept_applications, reject_applications
 from poll.models import Ballot, BallotEntry, Poll, ProvisionalUserApplication, Team, User, UserRole
 from poll.notifications import send_provisional_application_decision_message
-from poll.management.commands.update_team_logo_handles import TEAM_HANDLE_RENAMES
 
 
 class ProvisionalApplicationTests(TransactionTestCase):

@@ -2,7 +2,6 @@ django>=4.2.16,<5.0
 markdown
 psycopg2-binary
 gunicorn
-django-debug-toolbar>=5.2,<6.0
 pytz
 django-allauth
 praw>=8.0,<9.0

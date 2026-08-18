@@ -176,7 +176,7 @@ class ResultSet(models.Model):
         else:
             ballots = self._get_ballots()
             last_submission = ballots.aggregate(models.Max('submission_date'))['submission_date__max']
-            if last_submission < self.time_calculated:
+            if last_submission is None or last_submission < self.time_calculated:
                 needs_update = False
         return needs_update
 

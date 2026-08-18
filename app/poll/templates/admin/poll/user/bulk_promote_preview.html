@@ -1,0 +1,23 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div id="content-main">
+  <p>{{ preview|length }} unique username{{ preview|length|pluralize }} processed; {{ ready_count }} ready to promote; {{ failure_count }} cannot be promoted.</p>
+  <div class="module">
+  <table id="promotion-preview" class="results">
+    <thead><tr><th>Supplied username</th><th>Matched username</th><th>Status</th><th>Reason / open ballots</th></tr></thead>
+    <tbody>{% for result in preview %}<tr>
+      <td>{{ result.supplied_username }}</td><td>{{ result.canonical_username|default:'—' }}</td>
+      <td><strong>{{ result.status.value }}</strong></td><td>{% if result.reason %}{{ result.reason }}{% else %}{{ result.open_ballots }} open ballot{{ result.open_ballots|pluralize }} will be reclassified{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <textarea name="usernames" hidden>{{ form.data.usernames }}</textarea>
+    <div class="submit-row">
+      <button type="submit" name="confirm" value="1" class="default">Confirm promotion</button>
+      <button type="submit" name="edit" value="1">Edit username list</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
