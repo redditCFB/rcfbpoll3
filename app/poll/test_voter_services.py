@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from poll.models import Ballot, Poll, ResultSet, User, UserRole
+from poll.utils import get_result_set_record
 from poll.voter_forms import BulkPromotionForm, parse_usernames
 from poll.voter_services import PromotionStatus, preview_provisional_voter_promotion, promote_provisional_voter
 
@@ -167,6 +168,58 @@ class VoterPromotionServiceTests(TransactionTestCase):
         self.assertIsNone(provisional.end_date)
         self.assertEqual(ballot.user_type, UserRole.Role.PROVISIONAL)
         self.assertFalse(UserRole.objects.filter(user=user, role=UserRole.Role.VOTER).exists())
+
+
+class EmptyResultSetTests(TransactionTestCase):
+    def setUp(self):
+        self.now = timezone.now()
+        self.poll = Poll.objects.create(
+            year=2026, week='Empty', open_date=self.now - timedelta(days=1),
+            close_date=self.now + timedelta(days=1), publish_date=self.now + timedelta(days=1),
+            ap_date=self.now,
+        )
+
+    def test_empty_matching_result_set_needs_no_update(self):
+        result_set = ResultSet.objects.create(
+            poll=self.poll, time_calculated=self.now, main=True, provisional=False,
+        )
+
+        self.assertFalse(result_set.needs_update())
+
+    def test_empty_result_set_can_be_calculated(self):
+        result_set = get_result_set_record(self.poll)
+
+        self.assertEqual(result_set.results().count(), 0)
+
+    def test_later_qualifying_submission_invalidates_empty_cache(self):
+        result_set = get_result_set_record(self.poll)
+        self.assertFalse(result_set.needs_update())
+
+        user = User.objects.create(username='main-empty-result-user')
+        Ballot.objects.create(
+            user=user, poll=self.poll, submission_date=timezone.now(),
+            poll_type=Ballot.BallotType.HUMAN, user_type=UserRole.Role.VOTER,
+        )
+
+        self.assertTrue(result_set.needs_update())
+
+    def test_default_results_view_handles_only_provisional_ballots(self):
+        self.poll.publish_date = self.now - timedelta(hours=1)
+        self.poll.save(update_fields=['publish_date'])
+        user = User.objects.create(username='provisional-empty-result-user')
+        UserRole.objects.create(
+            user=user, role=UserRole.Role.PROVISIONAL,
+            start_date=self.now - timedelta(days=2),
+        )
+        Ballot.objects.create(
+            user=user, poll=self.poll, submission_date=timezone.now(),
+            poll_type=Ballot.BallotType.HUMAN, user_type=UserRole.Role.PROVISIONAL,
+        )
+
+        response = self.client.get(f'/poll/view/{self.poll.id}/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(get_result_set_record(self.poll).results().count(), 0)
 
 
 class BulkPromotionAdminTests(TransactionTestCase):
