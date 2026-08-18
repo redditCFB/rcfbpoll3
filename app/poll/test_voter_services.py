@@ -185,17 +185,38 @@ class BulkPromotionAdminTests(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '2 unique usernames processed')
         self.assertContains(response, 'Confirm promotion')
+        self.assertEqual(response.content.decode().count('<h1>Preview bulk promotion</h1>'), 1)
+        self.assertContains(response, 'class="results"')
         self.assertIsNone(UserRole.objects.get(user=self.user, role=UserRole.Role.PROVISIONAL).end_date)
 
         response = self.client.post(self.url, {'usernames': ' ReadyUser\nreadyuser, missing ', 'confirm': '1'})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Bulk promotion result')
+        self.assertEqual(response.content.decode().count('<h1>Bulk promotion result</h1>'), 1)
         self.assertEqual(UserRole.objects.filter(user=self.user, role=UserRole.Role.VOTER, end_date__isnull=True).count(), 1)
         self.assertContains(response, 'User not found')
 
     def test_get_does_not_mutate_and_non_staff_is_denied(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
+        self.assertFalse(UserRole.objects.filter(user=self.user, role=UserRole.Role.VOTER).exists())
+
+    def test_input_uses_admin_form_layout_and_single_title(self):
+        response = self.client.get(self.url)
+        html = response.content.decode()
+
+        self.assertEqual(html.count('<h1>Bulk promote provisional voters</h1>'), 1)
+        self.assertContains(response, 'class="form-row field-usernames"')
+        self.assertContains(response, 'class="vLargeTextField"')
+        self.assertContains(response, 'class="submit-row"')
+        self.assertContains(response, 'value="Preview promotions" class="default"')
+
+    def test_input_errors_use_normal_admin_error_markup(self):
+        response = self.client.post(self.url, {'usernames': 'u/example'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="errorlist"')
+        self.assertContains(response, 'without the leading &quot;u/&quot;')
         self.assertFalse(UserRole.objects.filter(user=self.user, role=UserRole.Role.VOTER).exists())
         self.admin.is_staff = False
         self.admin.save()

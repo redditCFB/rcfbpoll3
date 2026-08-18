@@ -14,7 +14,7 @@ services:
 
   migrate:
     build: ./app
-    command: sh -c 'python manage.py migrate --noinput && python manage.py update_team_logo_handles'
+    command: sh -c 'python manage.py migrate --noinput && python manage.py update_team_logo_handles && python manage.py ensure_local_admin'
     env_file:
       - ./.env.dev
     depends_on:

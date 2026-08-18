@@ -50,7 +50,9 @@ regular Git object so clones and Git history remain small.
 
 ### Local admin
 
-The fixture includes a local-only Django administrator:
+The sanitized fixture intentionally omits authentication accounts. After the
+local database is restored and migrated, local Compose startup ensures a
+local-only Django administrator exists:
 
 ```text
 Username: localadmin

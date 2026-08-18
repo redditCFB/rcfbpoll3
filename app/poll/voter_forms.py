@@ -27,7 +27,7 @@ def parse_usernames(value):
 class BulkPromotionForm(forms.Form):
     usernames = forms.CharField(
         label='Usernames',
-        widget=forms.Textarea(attrs={'rows': 12, 'cols': 80}),
+        widget=forms.Textarea(attrs={'class': 'vLargeTextField', 'rows': 12, 'cols': 80}),
         help_text='Paste one username per line, or separate usernames with commas. Do not include the leading "u/".',
     )
 
