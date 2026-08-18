@@ -8,7 +8,7 @@ from django.utils import timezone
 from PIL import Image
 
 from poll import views
-from poll.models import Ballot, BallotEntry, Poll, Result, ResultSet, Team, User
+from poll.models import Ballot, BallotEntry, Poll, ResultSet, Team, User
 from poll.post_summary import cache_post_summary
 
 

@@ -10,8 +10,8 @@ ENV PYTHONUNBUFFERED 1
 
 # install dependencies
 RUN pip install --upgrade pip
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install -r requirements-dev.txt
 
 RUN apt-get update && apt-get -y dist-upgrade
 RUN apt install -y netcat

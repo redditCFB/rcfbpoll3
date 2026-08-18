@@ -5,7 +5,7 @@ from django.test import RequestFactory, TransactionTestCase
 from django.utils import timezone
 
 from poll import views
-from poll.models import Ballot, BallotEntry, Poll, Team, User, UserRole
+from poll.models import Ballot, Poll, Team, User, UserRole
 
 
 class CopyPreviousRationaleTests(TransactionTestCase):

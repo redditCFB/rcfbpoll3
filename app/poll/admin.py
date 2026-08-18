@@ -102,6 +102,13 @@ class UserAdmin(admin.ModelAdmin):
             from django.core.exceptions import PermissionDenied
             raise PermissionDenied
         if request.method == 'POST':
+            if request.POST.get('edit') == '1':
+                form = BulkPromotionForm(initial={'usernames': request.POST.get('usernames', '')})
+                context = {
+                    **self.admin_site.each_context(request), 'title': 'Bulk promote provisional voters',
+                    'opts': self.model._meta, 'form': form,
+                }
+                return TemplateResponse(request, 'admin/poll/user/bulk_promote_form.html', context)
             form = BulkPromotionForm(request.POST)
             if form.is_valid():
                 usernames = form.cleaned_data['usernames']

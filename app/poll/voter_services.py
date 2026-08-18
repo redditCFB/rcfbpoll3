@@ -6,7 +6,7 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Ballot, User, UserRole
+from .models import Ballot, ResultSet, User, UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,11 @@ def _resolve_user(username, lock=False):
 
 
 def _state_outcome(username, user, status=PromotionStatus.READY, lock=False):
+    active_main_roles = UserRole.objects.filter(user=user, role=UserRole.Role.VOTER, end_date__isnull=True)
+    if lock:
+        active_main_roles = active_main_roles.select_for_update()
+    if active_main_roles.exists():
+        return PromotionOutcome(username, PromotionStatus.FAIL, user.username, 'Already an active main voter')
     provisional_roles = UserRole.objects.filter(
         user=user, role=UserRole.Role.PROVISIONAL, end_date__isnull=True,
     )
@@ -49,14 +54,10 @@ def _state_outcome(username, user, status=PromotionStatus.READY, lock=False):
         return PromotionOutcome(username, PromotionStatus.FAIL, user.username, 'No active provisional voter role')
     if len(provisional_roles) > 1:
         return PromotionOutcome(username, PromotionStatus.FAIL, user.username, 'Multiple active provisional voter roles')
-    active_main_roles = UserRole.objects.filter(user=user, role=UserRole.Role.VOTER, end_date__isnull=True)
-    if lock:
-        active_main_roles = active_main_roles.select_for_update()
-    if active_main_roles.exists():
-        return PromotionOutcome(username, PromotionStatus.FAIL, user.username, 'Already an active main voter')
     now = timezone.now()
     open_ballots = Ballot.objects.filter(
-        user=user, poll__open_date__lt=now, poll__close_date__gt=now,
+        user=user, user_type=UserRole.Role.PROVISIONAL,
+        poll__open_date__lt=now, poll__close_date__gt=now,
     ).count()
     return PromotionOutcome(username, status, user.username, open_ballots=open_ballots)
 
@@ -89,9 +90,14 @@ def promote_provisional_voter(username):
                 user=user, role=UserRole.Role.VOTER,
                 start_date=transition_time, end_date=None,
             )
-            reclassified = Ballot.objects.filter(
-                user=user, poll__open_date__lt=transition_time, poll__close_date__gt=transition_time,
-            ).update(user_type=UserRole.Role.VOTER)
+            affected_ballots = Ballot.objects.filter(
+                user=user, user_type=UserRole.Role.PROVISIONAL,
+                poll__open_date__lt=transition_time, poll__close_date__gt=transition_time,
+            )
+            affected_poll_ids = list(affected_ballots.values_list('poll_id', flat=True).distinct())
+            reclassified = affected_ballots.update(user_type=UserRole.Role.VOTER)
+            if affected_poll_ids:
+                ResultSet.objects.filter(poll_id__in=affected_poll_ids).delete()
             return PromotionOutcome(
                 username, PromotionStatus.PROMOTED, user.username, open_ballots=reclassified,
             )

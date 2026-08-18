@@ -1,7 +1,7 @@
 import praw
 from django.conf import settings
 
-from .models import RedditAccount, RedditRoleAssignment
+from .models import RedditRoleAssignment
 from .reddit_crypto import TokenEncryptionError, decrypt_refresh_token
 
 

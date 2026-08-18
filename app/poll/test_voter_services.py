@@ -6,7 +6,7 @@ from django.test import SimpleTestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from poll.models import Ballot, Poll, User, UserRole
+from poll.models import Ballot, Poll, ResultSet, User, UserRole
 from poll.voter_forms import BulkPromotionForm, parse_usernames
 from poll.voter_services import PromotionStatus, preview_provisional_voter_promotion, promote_provisional_voter
 
@@ -65,7 +65,7 @@ class VoterPromotionServiceTests(TransactionTestCase):
     def test_resolution_and_all_ineligible_states(self):
         self.provisional('KnownUser')
         User.objects.create(username='knownuser')
-        no_role = User.objects.create(username='NoRole')
+        User.objects.create(username='NoRole')
         main_user, _ = self.provisional('AlreadyMain')
         UserRole.objects.create(user=main_user, role=UserRole.Role.VOTER, start_date=self.now)
         multiple, _ = self.provisional('Multiple')
@@ -76,6 +76,12 @@ class VoterPromotionServiceTests(TransactionTestCase):
         self.assertEqual(preview_provisional_voter_promotion('NoRole').reason, 'No active provisional voter role')
         self.assertEqual(preview_provisional_voter_promotion('AlreadyMain').reason, 'Already an active main voter')
         self.assertEqual(preview_provisional_voter_promotion('Multiple').reason, 'Multiple active provisional voter roles')
+
+    def test_main_only_user_is_reported_as_already_main(self):
+        user = User.objects.create(username='MainOnly')
+        UserRole.objects.create(user=user, role=UserRole.Role.VOTER, start_date=self.now)
+        result = preview_provisional_voter_promotion('mainonly')
+        self.assertEqual(result.reason, 'Already an active main voter')
 
     def test_success_preserves_history_updates_open_only_and_isolated(self):
         user, provisional = self.provisional('PromoteMe')
@@ -98,11 +104,44 @@ class VoterPromotionServiceTests(TransactionTestCase):
         self.assertEqual(closed_ballot.user_type, UserRole.Role.PROVISIONAL)
         self.assertEqual(other_ballot.user_type, UserRole.Role.PROVISIONAL)
 
+    def test_promotion_invalidates_only_caches_for_affected_open_polls(self):
+        user, _ = self.provisional('CacheUser')
+        open_ballot = Ballot.objects.create(user=user, poll=self.open_poll, user_type=UserRole.Role.PROVISIONAL)
+        already_main_ballot = Ballot.objects.create(user=user, poll=self.open_poll, user_type=UserRole.Role.VOTER)
+        affected_cache = ResultSet.objects.create(poll=self.open_poll, time_calculated=self.now)
+        unrelated_open_cache = ResultSet.objects.create(
+            poll=self.open_poll, time_calculated=self.now, main=False, provisional=True,
+        )
+        closed_cache = ResultSet.objects.create(poll=self.closed_poll, time_calculated=self.now)
+
+        result = promote_provisional_voter('CacheUser')
+
+        self.assertEqual(result.open_ballots, 1)
+        open_ballot.refresh_from_db()
+        already_main_ballot.refresh_from_db()
+        self.assertEqual(open_ballot.user_type, UserRole.Role.VOTER)
+        self.assertEqual(already_main_ballot.user_type, UserRole.Role.VOTER)
+        self.assertFalse(ResultSet.objects.filter(pk=affected_cache.pk).exists())
+        self.assertFalse(ResultSet.objects.filter(pk=unrelated_open_cache.pk).exists())
+        self.assertTrue(ResultSet.objects.filter(pk=closed_cache.pk).exists())
+
+    def test_promotion_without_provisional_open_ballot_keeps_all_caches(self):
+        self.provisional('NoBallot')
+        open_cache = ResultSet.objects.create(poll=self.open_poll, time_calculated=self.now)
+        closed_cache = ResultSet.objects.create(poll=self.closed_poll, time_calculated=self.now)
+
+        result = promote_provisional_voter('NoBallot')
+
+        self.assertEqual(result.status, PromotionStatus.PROMOTED)
+        self.assertEqual(result.open_ballots, 0)
+        self.assertTrue(ResultSet.objects.filter(pk=open_cache.pk).exists())
+        self.assertTrue(ResultSet.objects.filter(pk=closed_cache.pk).exists())
+
     def test_repeated_execution_is_a_failure_and_does_not_duplicate_roles(self):
         user, _ = self.provisional('OnceOnly')
         self.assertEqual(promote_provisional_voter('OnceOnly').status, PromotionStatus.PROMOTED)
         result = promote_provisional_voter('OnceOnly')
-        self.assertEqual(result.reason, 'No active provisional voter role')
+        self.assertEqual(result.reason, 'Already an active main voter')
         self.assertEqual(UserRole.objects.filter(user=user, role=UserRole.Role.VOTER).count(), 1)
 
     @patch('django.db.models.query.QuerySet.update', side_effect=RuntimeError('database unavailable'))
@@ -112,6 +151,21 @@ class VoterPromotionServiceTests(TransactionTestCase):
         self.assertEqual(result.reason, 'Unexpected error while promoting user')
         provisional.refresh_from_db()
         self.assertIsNone(provisional.end_date)
+        self.assertFalse(UserRole.objects.filter(user=user, role=UserRole.Role.VOTER).exists())
+
+    @patch('poll.voter_services.ResultSet.objects.filter', side_effect=RuntimeError('cache unavailable'))
+    def test_cache_invalidation_failure_rolls_back_role_and_ballot(self, result_set_filter):
+        user, provisional = self.provisional('CacheRollback')
+        ballot = Ballot.objects.create(user=user, poll=self.open_poll, user_type=UserRole.Role.PROVISIONAL)
+        ResultSet.objects.create(poll=self.open_poll, time_calculated=self.now)
+
+        result = promote_provisional_voter('CacheRollback')
+
+        self.assertEqual(result.reason, 'Unexpected error while promoting user')
+        provisional.refresh_from_db()
+        ballot.refresh_from_db()
+        self.assertIsNone(provisional.end_date)
+        self.assertEqual(ballot.user_type, UserRole.Role.PROVISIONAL)
         self.assertFalse(UserRole.objects.filter(user=user, role=UserRole.Role.VOTER).exists())
 
 
@@ -146,3 +200,14 @@ class BulkPromotionAdminTests(TransactionTestCase):
         self.admin.is_staff = False
         self.admin.save()
         self.assertEqual(self.client.get(self.url).status_code, 302)
+
+    def test_edit_preserves_original_input_without_mutation(self):
+        original = ' ReadyUser\nreadyuser, missing '
+        response = self.client.post(self.url, {'usernames': original})
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(self.url, {'usernames': original, 'edit': '1'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, original)
+        self.assertFalse(UserRole.objects.filter(user=self.user, role=UserRole.Role.VOTER).exists())

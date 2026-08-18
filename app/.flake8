@@ -1,0 +1,4 @@
+[flake8]
+exclude = migrations,__pycache__,.git,static
+max-line-length = 120
+ignore = E203,E501,W503

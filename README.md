@@ -31,6 +31,18 @@ restores it to the local PostgreSQL volume, and applies any outstanding Django
 migrations. Later starts reuse the volume and do not download or overwrite
 data.
 
+Local development installs `app/requirements-dev.txt`, which includes the
+runtime requirements from `app/requirements.txt`, Debug Toolbar, and flake8.
+Runtime/production images install only `app/requirements.txt`; Debug Toolbar
+is enabled only when `DEBUG=1`. Rebuild the development image after changing
+dependencies, then run the local lint check with:
+
+```sh
+docker compose run --rm --no-deps --entrypoint flake8 poll .
+```
+
+Flake8 is currently a local check and is not a CI gate.
+
 The fixture contains public poll content, usernames, and rationales. It omits
 authentication accounts, sessions, social-login data, admin logs, provisional
 applications, and derived result caches. It is a release asset rather than a

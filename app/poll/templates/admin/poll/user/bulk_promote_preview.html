@@ -14,7 +14,7 @@
     {% csrf_token %}
     <textarea name="usernames" hidden>{{ form.data.usernames }}</textarea>
     <button type="submit" name="confirm" value="1" class="default">Confirm promotion</button>
-    <a href="{% url 'admin:poll_user_bulk_promote' %}">Edit username list</a>
+    <button type="submit" name="edit" value="1">Edit username list</button>
   </form>
 </div>
 {% endblock %}
