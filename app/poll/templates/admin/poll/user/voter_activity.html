@@ -15,6 +15,7 @@
 
 {% block content %}
   <div id="content-main">
+    <p><a href="{% url 'admin:poll_user_bulk_promote' %}">Bulk promote provisional voters</a></p>
     <nav class="voter-tabs" aria-label="Voter type">
       <a href="?tab=main&year={{ selected_year|default:'' }}" class="{% if active_tab == 'main' %}active{% endif %}">Active main voters</a>
       <a href="?tab=provisional&year={{ selected_year|default:'' }}" class="{% if active_tab == 'provisional' %}active{% endif %}">Active provisional voters</a>

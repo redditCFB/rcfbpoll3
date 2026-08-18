@@ -13,6 +13,8 @@ from .models import (
     Result, AboutPage, RedditAccount, RedditRoleAssignment
 )
 from .provisional_services import accept_provisional_application, reject_provisional_application
+from .voter_forms import BulkPromotionForm
+from .voter_services import PromotionStatus, preview_provisional_voter_promotion, promote_provisional_voter
 
 
 class RoleInline(admin.TabularInline):
@@ -36,6 +38,7 @@ class UserAdmin(admin.ModelAdmin):
         urls = super().get_urls()
         custom_urls = [
             path('voter-activity/', self.admin_site.admin_view(self.voter_activity_view), name='poll_user_voter_activity'),
+            path('bulk-promote-provisional-voters/', self.admin_site.admin_view(self.bulk_promote_view), name='poll_user_bulk_promote'),
         ]
         return custom_urls + urls
 
@@ -93,6 +96,40 @@ class UserAdmin(admin.ModelAdmin):
             'active_tab': tab, 'years': years, 'selected_year': selected_year, 'voters': voters,
         }
         return TemplateResponse(request, 'admin/poll/user/voter_activity.html', context)
+
+    def bulk_promote_view(self, request):
+        if not self.has_change_permission(request):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        if request.method == 'POST':
+            form = BulkPromotionForm(request.POST)
+            if form.is_valid():
+                usernames = form.cleaned_data['usernames']
+                if request.POST.get('confirm') == '1':
+                    results = [promote_provisional_voter(username) for username in usernames]
+                    context = {
+                        **self.admin_site.each_context(request), 'title': 'Bulk promotion result',
+                        'opts': self.model._meta, 'results': results,
+                        'promoted_count': sum(result.status is PromotionStatus.PROMOTED for result in results),
+                        'failure_count': sum(result.status is PromotionStatus.FAIL for result in results),
+                        'ballot_count': sum(result.open_ballots for result in results if result.status is PromotionStatus.PROMOTED),
+                    }
+                    return TemplateResponse(request, 'admin/poll/user/bulk_promote_result.html', context)
+                preview = [preview_provisional_voter_promotion(username) for username in usernames]
+                context = {
+                    **self.admin_site.each_context(request), 'title': 'Preview bulk promotion',
+                    'opts': self.model._meta, 'form': form, 'preview': preview,
+                    'ready_count': sum(result.status is PromotionStatus.READY for result in preview),
+                    'failure_count': sum(result.status is PromotionStatus.FAIL for result in preview),
+                }
+                return TemplateResponse(request, 'admin/poll/user/bulk_promote_preview.html', context)
+        else:
+            form = BulkPromotionForm()
+        context = {
+            **self.admin_site.each_context(request), 'title': 'Bulk promote provisional voters',
+            'opts': self.model._meta, 'form': form,
+        }
+        return TemplateResponse(request, 'admin/poll/user/bulk_promote_form.html', context)
 
 
 admin.site.register(User, UserAdmin)
