@@ -28,6 +28,34 @@ class EnsureLocalAdminCommandTests(TransactionTestCase):
         self.assertNotEqual(user.password, 'RcfbPollLocal2026!')
 
     @override_settings(DEBUG=True)
+    def test_missing_username_environment_variable_fails_clearly(self):
+        with patch.dict(os.environ, {
+            'LOCAL_ADMIN_PASSWORD': 'RcfbPollLocal2026!',
+        }, clear=True):
+            with self.assertRaisesMessage(CommandError, 'LOCAL_ADMIN_USERNAME must be set and non-empty'):
+                call_command('ensure_local_admin', stdout=StringIO())
+
+    @override_settings(DEBUG=True)
+    def test_missing_password_environment_variable_fails_clearly(self):
+        with patch.dict(os.environ, {
+            'LOCAL_ADMIN_USERNAME': 'localadmin',
+        }, clear=True):
+            with self.assertRaisesMessage(CommandError, 'LOCAL_ADMIN_PASSWORD must be set and non-empty'):
+                call_command('ensure_local_admin', stdout=StringIO())
+
+    @override_settings(DEBUG=True)
+    def test_empty_environment_variable_fails_clearly(self):
+        for name in ('LOCAL_ADMIN_USERNAME', 'LOCAL_ADMIN_PASSWORD'):
+            environment = {
+                'LOCAL_ADMIN_USERNAME': 'localadmin',
+                'LOCAL_ADMIN_PASSWORD': 'RcfbPollLocal2026!',
+                name: '',
+            }
+            with self.subTest(name=name), patch.dict(os.environ, environment, clear=True):
+                with self.assertRaisesMessage(CommandError, f'{name} must be set and non-empty'):
+                    call_command('ensure_local_admin', stdout=StringIO())
+
+    @override_settings(DEBUG=True)
     def test_is_idempotent_and_does_not_reset_existing_password(self):
         user_model = get_user_model()
         user_model.objects.create_user(

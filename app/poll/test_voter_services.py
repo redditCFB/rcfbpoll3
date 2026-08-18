@@ -200,6 +200,9 @@ class BulkPromotionAdminTests(TransactionTestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(UserRole.objects.filter(user=self.user, role=UserRole.Role.VOTER).exists())
+        self.admin.is_staff = False
+        self.admin.save()
+        self.assertEqual(self.client.get(self.url).status_code, 302)
 
     def test_input_uses_admin_form_layout_and_single_title(self):
         response = self.client.get(self.url)
@@ -218,9 +221,6 @@ class BulkPromotionAdminTests(TransactionTestCase):
         self.assertContains(response, 'class="errorlist"')
         self.assertContains(response, 'without the leading &quot;u/&quot;')
         self.assertFalse(UserRole.objects.filter(user=self.user, role=UserRole.Role.VOTER).exists())
-        self.admin.is_staff = False
-        self.admin.save()
-        self.assertEqual(self.client.get(self.url).status_code, 302)
 
     def test_edit_preserves_original_input_without_mutation(self):
         original = ' ReadyUser\nreadyuser, missing '

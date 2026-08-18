@@ -59,9 +59,10 @@ Username: localadmin
 Password: RcfbPollLocal2026!
 ```
 
-This password is intentionally public and predictable because the fixture is
-public. Use the account only in a local development container; never reuse
-these credentials or expose that container as a real deployment.
+This password is intentionally public and predictable because it is part of
+the local development configuration in this public repository. Use the account
+only in a local development container; never reuse these credentials or expose
+that container as a real deployment.
 
 ### Resetting local data
 

@@ -12,10 +12,12 @@ class Command(BaseCommand):
         if not settings.DEBUG:
             raise CommandError('ensure_local_admin is only available when DEBUG=True.')
 
-        username = os.environ.get('LOCAL_ADMIN_USERNAME', 'localadmin')
-        password = os.environ.get('LOCAL_ADMIN_PASSWORD', 'RcfbPollLocal2026!')
-        if not username or not password:
-            raise CommandError('LOCAL_ADMIN_USERNAME and LOCAL_ADMIN_PASSWORD must be non-empty.')
+        username = os.environ.get('LOCAL_ADMIN_USERNAME')
+        password = os.environ.get('LOCAL_ADMIN_PASSWORD')
+        if not username:
+            raise CommandError('LOCAL_ADMIN_USERNAME must be set and non-empty.')
+        if not password:
+            raise CommandError('LOCAL_ADMIN_PASSWORD must be set and non-empty.')
 
         user_model = get_user_model()
         user, created = user_model.objects.get_or_create(
