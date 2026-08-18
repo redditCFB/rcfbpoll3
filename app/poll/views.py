@@ -4,7 +4,9 @@ from math import ceil
 import requests
 from urllib.parse import unquote
 
+from django.contrib import messages
 from django.contrib.auth import logout as auth_logout
+from django.db import transaction
 from django.db.models import Prefetch
 from django.db.models.functions import Lower
 from django.http import FileResponse, HttpResponse, HttpResponseForbidden, HttpResponseBadRequest, StreamingHttpResponse
@@ -12,6 +14,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.utils.text import slugify
 
+from .ballot_import import BallotImportError, parse_ballot_import, validate_entries
 from .models import AboutPage, Ballot, BallotEntry, Poll, ProvisionalUserApplication, User, UserRole, Team
 from .utils import check_for_errors, check_for_warnings, get_outlier_analysis, get_result_set, get_results_comparison
 from .post_summary import cache_post_summary
@@ -622,6 +625,49 @@ def edit_ballot(request, ballot_id):
             'ranks': range(1, 26),
             'previous_rationale': previous_rationale
         })
+
+
+def import_ballot(request, ballot_id):
+    ballot = Ballot.objects.get(pk=ballot_id)
+    if request.method != 'POST':
+        return HttpResponseBadRequest('Import requires a POST request.')
+    if not request.user.is_authenticated or not ballot.poll.is_open or ballot.user.username != request.user.username:
+        return HttpResponseForbidden()
+    uploaded_file = request.FILES.get('ballot-file')
+    if not uploaded_file:
+        messages.error(request, 'Choose a CSV or JSON file to import.')
+        return redirect('/ballot/edit/%d/' % ballot.id)
+
+    teams = {team.handle: team for team in Team.objects.filter(use_for_ballot=True)}
+    try:
+        imported = parse_ballot_import(uploaded_file, teams)
+        validate_entries(imported['entries'])
+    except BallotImportError as exc:
+        messages.error(request, str(exc))
+        return redirect('/ballot/edit/%d/' % ballot.id)
+
+    with transaction.atomic():
+        existing = {entry.team_id: entry for entry in BallotEntry.objects.select_for_update().filter(ballot=ballot)}
+        ballot.submission_date = None
+        if imported['poll_type_supplied']:
+            ballot.poll_type = imported['poll_type']
+        if imported['overall_rationale_supplied']:
+            ballot.overall_rationale = imported['overall_rationale']
+        ballot.save()
+        new_entry_ids = []
+        for imported_entry in imported['entries']:
+            entry = existing.get(imported_entry['team'].id)
+            if entry is None:
+                entry = BallotEntry(ballot=ballot, team=imported_entry['team'])
+            entry.rank = imported_entry['rank']
+            if imported_entry['rationale_supplied']:
+                entry.rationale = imported_entry['rationale']
+            entry.save()
+            new_entry_ids.append(entry.id)
+        BallotEntry.objects.filter(ballot=ballot).exclude(id__in=new_entry_ids).delete()
+
+    messages.success(request, 'Ballot imported successfully. Review it before submitting.')
+    return redirect('/ballot/edit/%d/' % ballot.id)
 
 
 def save_teams(request, ballot_id):
