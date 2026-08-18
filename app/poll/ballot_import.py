@@ -2,8 +2,7 @@ import csv
 import io
 import json
 
-
-POLL_TYPE_VALUES = {'human': 1, 'computer': 2, 'hybrid': 3}
+from .models import Ballot
 
 
 class BallotImportError(ValueError):
@@ -53,7 +52,7 @@ def _parse_json(contents, teams):
         raise BallotImportError('JSON must contain an entries array.')
 
     poll_type_supplied = 'poll_type' in payload
-    if poll_type_supplied and payload['poll_type'] not in POLL_TYPE_VALUES:
+    if poll_type_supplied and _poll_type_value(payload['poll_type']) is None:
         raise BallotImportError('poll_type must be human, computer, or hybrid.')
     overall_rationale_supplied = 'overall_rationale' in payload
     if overall_rationale_supplied and not isinstance(payload['overall_rationale'], str):
@@ -76,11 +75,20 @@ def _parse_json(contents, teams):
 
     return {
         'entries': entries,
-        'poll_type': POLL_TYPE_VALUES.get(payload.get('poll_type')),
+        'poll_type': _poll_type_value(payload.get('poll_type')),
         'overall_rationale': payload.get('overall_rationale'),
         'poll_type_supplied': poll_type_supplied,
         'overall_rationale_supplied': overall_rationale_supplied,
     }
+
+
+def _poll_type_value(name):
+    if not isinstance(name, str):
+        return None
+    for choice in Ballot.BallotType:
+        if choice.label.lower() == name:
+            return choice.value
+    return None
 
 
 def _entry(rank, handle, row_number, teams, strict_integer=False):
