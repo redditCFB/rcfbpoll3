@@ -131,6 +131,19 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'static'
 
+# Manifest storage requires collectstatic to have run first. Keep the default
+# storage during Django's test command so templates can render without a
+# pre-populated production static directory.
+if not DEBUG and os.environ.get('DJANGO_TESTING') != '1':
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+        },
+    }
+
 TEAM_LOGO_URL_TEMPLATE = os.environ.get('TEAM_LOGO_URL_TEMPLATE', 'https://cdn.redditcfb.com/60x40/cfb/{handle}.png')
 
 REDDIT_AUTOMATION_CLIENT_ID = os.environ.get('REDDIT_AUTOMATION_CLIENT_ID', '')
