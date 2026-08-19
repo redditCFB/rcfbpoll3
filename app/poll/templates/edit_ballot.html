@@ -2,7 +2,57 @@
 {% load static team_logo %}
 {% block content %}
 	<div class="container">
-		<h4 class="py-3">{{ ballot.poll }}</h4>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+            <h4 class="mb-0">{{ ballot.poll }}</h4>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#import-ballot-modal">Import ballot</button>
+        </div>
+        <div class="modal fade" id="import-ballot-modal" tabindex="-1" aria-labelledby="import-ballot-modal-label" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="import-ballot-modal-label">Import ballot</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="import-ballot-form" action="{% url 'import_ballot' ballot.id %}" method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <label class="form-label" for="ballot-file">UTF-8 CSV/JSON file</label>
+                            <input class="form-control" id="ballot-file" name="ballot-file" type="file" accept=".csv,.json, text/csv, application/json" required>
+                            <p class="form-text">CSV and JSON are supported. The file must contain ranks 1 through 25 exactly once.</p>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#import-help" aria-expanded="false" aria-controls="import-help">Format help</button>
+                            <div class="collapse mt-3" id="import-help">
+                                <p>Upload a UTF-8 CSV or JSON file containing ranks 1 through 25 exactly once. <code>rank</code> and <code>team_handle</code> are required. JSON <code>poll_type</code>, <code>overall_rationale</code>, and each entry's <code>rationale</code> are optional; poll types are <code>human</code>, <code>computer</code>, and <code>hybrid</code>. The import replaces rankings but does not submit the ballot.</p>
+                                <details class="mb-2"><summary>CSV example</summary><pre class="bg-light p-2 mb-0"><code>rank,team_handle
+1,example-handle
+2,another-handle
+...
+25,last-handle</code></pre></details>
+                                <details class="mb-2"><summary>JSON example</summary><pre class="bg-light p-2 mb-0"><code>{
+  "poll_type": "computer",
+  "overall_rationale": "Optional methodology",
+  "entries": [
+    {
+      "rank": 1,
+      "team_handle": "example-handle",
+      "rationale": "Optional team rationale"
+    }
+  ]
+}</code></pre></details>
+                                <p class="mb-1"><strong>Valid team handles for this ballot:</strong></p>
+                                <div class="border rounded p-2" style="max-height: 12rem; overflow-y: auto;">
+                                    {% for handle, team in teams.items %}<div><code>{{ handle }}</code> &mdash; {{ team.name }}</div>{% endfor %}
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" form="import-ballot-form" class="btn btn-primary">Import</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <form id="save-form" action="/ballot/save/{{ ballot.id }}/" method="post">
             {% csrf_token %}
             <div class="form-floating my-3 col-6 col-md-3">

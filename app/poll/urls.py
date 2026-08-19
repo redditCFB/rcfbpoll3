@@ -25,6 +25,7 @@ urlpatterns = [
     path('apply_for_provisional/', views.apply_for_provisional, name='apply_for_provisional'),
     path('create_ballot/<int:poll_id>/', views.create_ballot, name='create_ballot'),
     path('ballot/edit/<int:ballot_id>/', views.edit_ballot, name='edit_ballot'),
+    path('ballot/import/<int:ballot_id>/', views.import_ballot, name='import_ballot'),
     path('ballot/save/<int:ballot_id>/', views.save_teams, name='save_ballot'),
     path('ballot/save/<int:ballot_id>/reasons/', views.save_reasons, name='save_reasons'),
     path('ballot/validate/<int:ballot_id>/', views.validate_ballot, name='validate_ballot'),

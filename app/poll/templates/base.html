@@ -125,6 +125,15 @@
 		</div>
 	</nav>
 
+
+    {% if messages %}
+        <div class="container mt-5 pt-3">
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
 	{% block content %}
 	{% endblock %}
 	
