@@ -9,7 +9,7 @@ from django.conf import settings
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from .models import Ballot, UserRole
-from .utils import get_result_set, get_result_set_record, get_results_comparison
+from .utils import get_result_set_record, get_results_comparison
 
 
 WIDTH = 1200
@@ -23,9 +23,7 @@ CORAL = "#e45f58"
 INK = "#0d2534"
 MUTED = "#657580"
 WHITE = "#ffffff"
-SURFACE = "#102f40"
 SURFACE_LIGHT = "#173b4d"
-LINE = "#dcd7ce"
 
 
 def _font(size, bold=False):
@@ -61,16 +59,6 @@ def _team_name(team):
     return team.short_name or team.name
 
 
-def _team_payload(team, **values):
-    payload = {
-        "handle": team.handle,
-        "name": team.name,
-        "short_name": _team_name(team),
-    }
-    payload.update(values)
-    return payload
-
-
 def build_post_summary(poll):
     comparison = list(get_results_comparison(poll))
     top25 = [row for row in comparison if row["rank"] <= 25]
@@ -81,36 +69,10 @@ def build_post_summary(poll):
     )
     voter_count = voter_count.count()
 
-    dropped = []
-    if poll.last_week:
-        current_ids = {row["team"].id for row in top25}
-        dropped = [
-            _team_payload(row.team, rank=row.rank)
-            for row in get_result_set(poll.last_week)
-            if row.rank <= 25 and row.team_id not in current_ids
-        ]
-
-    polarizing = sorted(top25, key=lambda row: row["std_dev"], reverse=True)[:3]
-    polarizing = [
-        _team_payload(
-            row["team"],
-            rank=row["rank"],
-            std_dev=row["std_dev"],
-            coverage=row["votes"] / voter_count if voter_count else 0,
-        )
-        for row in polarizing
-    ]
-    biggest_ppv_gain = max(top25, key=lambda row: row["ppv_diff"], default=None)
-    biggest_ppv_loss = min(top25, key=lambda row: row["ppv_diff"], default=None)
-
     return {
         "poll": str(poll),
         "voter_count": voter_count,
         "top25": top25,
-        "biggest_ppv_gain": biggest_ppv_gain,
-        "biggest_ppv_loss": biggest_ppv_loss,
-        "dropped": dropped[:3],
-        "polarizing": polarizing,
     }
 
 
@@ -121,7 +83,7 @@ def _load_logo(handle):
         response = requests.get(url, timeout=(2, 4))
         response.raise_for_status()
         image = Image.open(BytesIO(response.content)).convert("RGBA")
-        image.thumbnail((180, 180), Image.Resampling.LANCZOS)
+        image.thumbnail((320, 320), Image.Resampling.LANCZOS)
         return image.copy()
     except (OSError, requests.RequestException):
         return None
@@ -155,88 +117,32 @@ def _load_site_logo():
     return None
 
 
-def _movement(result):
+def _movement_label(result):
     change = result.get("rank_diff", 0)
     rank_text = result.get("rank_diff_str", "--")
     if rank_text == "NEW":
         return "NEW", "new"
     if change == 0:
-        return "HOLD", "hold"
-    return (f"UP {change}", "up") if change > 0 else (f"DOWN {abs(change)}", "down")
+        return "—", "hold"
+    return (f"+{change}", "up") if change > 0 else (f"−{abs(change)}", "down")
 
 
-def _draw_movement(draw, result, x, y, on_dark=False, anchor="mm", size=11):
-    label, state = _movement(result)
+def _draw_team_mark(canvas, draw, result, center_x, top_y, logo_size, slot_width, name_size, rank_size, on_dark=False):
+    label, state = _movement_label(result)
     colors = {
         "up": MINT if on_dark else GREEN,
         "down": "#ff8a83" if on_dark else CORAL,
         "new": GOLD,
         "hold": "#91a4af" if on_dark else MUTED,
     }
-    _text(draw, (x, y), label, size=size, bold=True, fill=colors[state], anchor=anchor)
-
-
-def _draw_featured_team(canvas, draw, result, box):
-    x1, y1, x2, y2 = box
-    draw.rounded_rectangle(box, radius=24, fill=PAPER)
-    draw.rounded_rectangle((x1, y1, x1 + 12, y2), radius=6, fill=GREEN)
-    _text(draw, (x1 + 38, y1 + 30), "COMMUNITY NO. 1", size=16, bold=True, fill=GREEN)
-    _draw_movement(draw, result, x2 - 30, y1 + 41, anchor="rm", size=11)
-    _text(draw, (x1 + 38, y1 + 82), "#1", size=63, bold=True, fill=INK)
-    _paste_logo(canvas, result["team"].handle, (x2 - 242, y1 + 54, 210, 210), frame=False)
-    _draw_fitted(draw, (x1 + 38, y2 - 76), _team_name(result["team"]), x2 - x1 - 76, size=38, min_size=24, bold=True, fill=INK)
-    _text(draw, (x1 + 38, y2 - 35), "Top-ranked by r/CFB's human voters", size=14, fill=MUTED)
-
-
-def _draw_chaser(canvas, draw, result, box):
-    x1, y1, x2, y2 = box
-    middle = (y1 + y2) / 2
-    _text(draw, (x1 + 4, middle), f'#{result["rank"]}', size=24, bold=True, fill=MINT, anchor="lm")
-    _paste_logo(canvas, result["team"].handle, (x1 + 64, y1 + 8, 52, 52), border="#d9e1e4")
-    _draw_fitted(draw, (x1 + 136, middle), _team_name(result["team"]), x2 - x1 - 255, size=19, min_size=13, bold=True, fill=WHITE, anchor="lm")
-    _draw_movement(draw, result, x2 - 18, middle, on_dark=True, anchor="rm", size=11)
-    draw.line((x1, y2, x2, y2), fill="#29495a", width=1)
-
-
-def _draw_ranked_row(canvas, draw, result, box):
-    x1, y1, x2, y2 = box
-    middle = (y1 + y2) / 2
-    _text(draw, (x1 + 3, middle), result["rank"], size=17, bold=True, fill=GREEN, anchor="lm")
-    _paste_logo(canvas, result["team"].handle, (x1 + 42, y1 + 5, 36, 36), frame=False)
-    _draw_fitted(draw, (x1 + 92, middle), _team_name(result["team"]), x2 - x1 - 205, size=15, min_size=11, bold=True, fill=INK, anchor="lm")
-    _draw_movement(draw, result, x2 - 8, middle, anchor="rm", size=10)
-    draw.line((x1, y2, x2, y2), fill=LINE, width=1)
-
-
-def _draw_momentum(canvas, draw, summary, box):
-    x1, y1, x2, y2 = box
-    _text(draw, (x1, y1), "BIGGEST MOVES", size=19, bold=True, fill=WHITE)
-    _text(draw, (x1, y1 + 27), "Change in points per voter", size=12, fill="#91a4af")
-    rows = (("RISING", summary["biggest_ppv_gain"], GREEN, "+"), ("FALLING", summary["biggest_ppv_loss"], CORAL, "−"))
-    for index, (label, result, color, sign) in enumerate(rows):
-        if not result:
-            continue
-        y = y1 + 58 + index * 67
-        _paste_logo(canvas, result["team"].handle, (x1, y, 52, 52), border="#d9e1e4")
-        _text(draw, (x1 + 70, y + 6), label, size=10, bold=True, fill=MINT if label == "RISING" else "#ff8a83")
-        _draw_fitted(draw, (x1 + 70, y + 30), _team_name(result["team"]), 230, size=17, min_size=12, bold=True, fill=WHITE)
-        _text(draw, (x2, y + 24), f'{sign}{abs(result["ppv_diff"]):.2f}', size=21, bold=True, fill=MINT if label == "RISING" else "#ff8a83", anchor="ra")
-    if summary["dropped"]:
-        _text(draw, (x1, y2 - 5), "OUT", size=10, bold=True, fill="#91a4af", anchor="ls")
-        names = "  •  ".join(item["short_name"] for item in summary["dropped"])
-        _draw_fitted(draw, (x1 + 42, y2 - 5), names, x2 - x1 - 42, size=12, min_size=9, bold=True, fill=WHITE, anchor="ls")
-
-
-def _draw_polarizing(canvas, draw, summary, box):
-    x1, y1, x2, y2 = box
-    _text(draw, (x1, y1), "MOST DEBATED", size=19, bold=True, fill=WHITE)
-    _text(draw, (x1, y1 + 27), "Largest ballot-to-ballot spread", size=12, fill="#91a4af")
-    for index, item in enumerate(summary["polarizing"]):
-        y = y1 + 58 + index * 53
-        _paste_logo(canvas, item["handle"], (x1, y, 42, 42), border="#d9e1e4")
-        _text(draw, (x1 + 58, y + 9), f'#{item["rank"]}', size=11, bold=True, fill=MINT)
-        _draw_fitted(draw, (x1 + 93, y + 9), item["short_name"], 215, size=15, min_size=10, bold=True, fill=WHITE)
-        _text(draw, (x2, y + 20), f'{item["coverage"]:.0%} ranked  •  spread {item["std_dev"]:.1f}', size=11, fill="#b6c4cc", anchor="ra")
+    rank_fill = MINT if on_dark else GREEN
+    name_fill = WHITE if on_dark else INK
+    _text(draw, (center_x - 9, top_y + 9), f'#{result["rank"]}', size=rank_size, bold=True, fill=rank_fill, anchor="ra")
+    _text(draw, (center_x + 11, top_y + 9), label, size=max(10, rank_size - 7), bold=True, fill=colors[state], anchor="la")
+    logo_y = top_y + rank_size + 13
+    _paste_logo(canvas, result["team"].handle, (int(center_x - logo_size / 2), logo_y, logo_size, logo_size), frame=False)
+    name_y = logo_y + logo_size + 10
+    _draw_fitted(draw, (center_x, name_y), _team_name(result["team"]), slot_width - 12, size=name_size, min_size=10, bold=True, fill=name_fill, anchor="ma")
 
 
 def _draw_empty_state(draw):
@@ -262,35 +168,38 @@ def render_post_summary(poll):
 
     top25 = summary["top25"]
     if top25:
-        _draw_featured_team(canvas, draw, top25[0], (38, 158, 558, 500))
-        draw.rounded_rectangle((582, 158, 1162, 500), radius=24, fill=SURFACE)
-        _text(draw, (610, 182), "THE CHASERS", size=16, bold=True, fill=WHITE)
-        _text(draw, (1134, 186), "WEEK-OVER-WEEK", size=10, bold=True, fill="#91a4af", anchor="ra")
-        for index, result in enumerate(top25[1:5]):
-            y1 = 216 + index * 67
-            _draw_chaser(canvas, draw, result, (610, y1, 1134, y1 + 58))
+        draw.rounded_rectangle((38, 158, 1162, 940), radius=28, fill=PAPER)
+        _text(draw, (66, 181), "A PLAYOFF-SIZED TOP 12", size=17, bold=True, fill=INK)
+        _text(draw, (1134, 185), "POLL RANKS  /  NOT A BRACKET", size=10, bold=True, fill=MUTED, anchor="ra")
 
-        draw.rounded_rectangle((38, 524, 1162, 1112), radius=24, fill=PAPER)
-        _text(draw, (66, 550), "FULL RANKING", size=20, bold=True, fill=NAVY)
-        _text(draw, (1134, 554), "MOVEMENT SINCE LAST POLL", size=10, bold=True, fill=MUTED, anchor="ra")
-        draw.line((600, 600, 600, 1085), fill=LINE, width=1)
-        rows = top25[5:25]
-        for index, result in enumerate(rows):
-            column = index // 10
-            row = index % 10
-            x1 = 66 + column * 562
-            y1 = 604 + row * 47
-            _draw_ranked_row(canvas, draw, result, (x1, y1, x1 + 506, y1 + 42))
+        rows = (
+            (top25[0:1], (600,), 198, 180, 280, 24, 25),
+            (top25[1:3], (375, 825), 426, 128, 330, 18, 21),
+            (top25[3:7], (170, 455, 745, 1030), 600, 98, 230, 15, 18),
+            (top25[7:12], (125, 362, 600, 838, 1075), 754, 84, 190, 13, 16),
+        )
+        for results, centers, top_y, logo_size, slot_width, name_size, rank_size in rows:
+            for result, center_x in zip(results, centers):
+                _draw_team_mark(canvas, draw, result, center_x, top_y, logo_size, slot_width, name_size, rank_size)
 
-        draw.rounded_rectangle((38, 1136, 1162, 1418), radius=24, fill=SURFACE)
-        draw.line((600, 1164, 600, 1390), fill="#29495a", width=1)
-        _draw_momentum(canvas, draw, summary, (66, 1163, 562, 1388))
-        _draw_polarizing(canvas, draw, summary, (632, 1163, 1134, 1388))
+        draw.rounded_rectangle((430, 918, 770, 954), radius=18, fill=GREEN)
+        _text(draw, (600, 936), "12-TEAM CUT LINE", size=13, bold=True, fill=WHITE, anchor="mm")
+
+        _text(draw, (40, 982), "THE REST OF THE TOP 25", size=17, bold=True, fill=WHITE)
+        _text(draw, (1160, 986), "RANKS 13–25", size=10, bold=True, fill="#91a4af", anchor="ra")
+        lower_rows = (
+            (top25[12:18], (110, 306, 502, 698, 894, 1090), 1004, 96, 182),
+            (top25[18:25], (90, 260, 430, 600, 770, 940, 1110), 1204, 96, 156),
+        )
+        for results, centers, top_y, logo_size, slot_width in lower_rows:
+            for result, center_x in zip(results, centers):
+                _draw_team_mark(canvas, draw, result, center_x, top_y, logo_size, slot_width, 14, 16, on_dark=True)
+        draw.line((40, 1418, 1160, 1418), fill=SURFACE_LIGHT, width=1)
     else:
         _draw_empty_state(draw)
 
-    _text(draw, (40, 1460), "POLL.REDDITCFB.COM", size=14, bold=True, fill=MINT, anchor="lm")
-    _text(draw, (1160, 1460), "25 TEAMS  /  HUMAN BALLOTS  /  EVERY WEEK", size=11, fill="#91a4af", anchor="rm")
+    _text(draw, (40, 1458), "POLL.REDDITCFB.COM", size=15, bold=True, fill=MINT, anchor="lm")
+    _text(draw, (1160, 1458), "THE HUMAN TOP 25", size=11, bold=True, fill="#91a4af", anchor="rm")
     output = BytesIO()
     canvas.convert("RGB").save(output, format="PNG", optimize=True)
     return output.getvalue()
