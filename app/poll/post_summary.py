@@ -18,8 +18,6 @@ PAPER = "#f7f3eb"
 NAVY = "#081f2c"
 GREEN = "#0e8f68"
 MINT = "#a7e8ce"
-GOLD = "#f1b743"
-CORAL = "#e45f58"
 INK = "#0d2534"
 MUTED = "#657580"
 WHITE = "#ffffff"
@@ -83,6 +81,9 @@ def _load_logo(handle):
         response = requests.get(url, timeout=(2, 4))
         response.raise_for_status()
         image = Image.open(BytesIO(response.content)).convert("RGBA")
+        content_box = image.getbbox()
+        if content_box:
+            image = image.crop(content_box)
         image.thumbnail((320, 320), Image.Resampling.LANCZOS)
         return image.copy()
     except (OSError, requests.RequestException):
@@ -117,32 +118,15 @@ def _load_site_logo():
     return None
 
 
-def _movement_label(result):
-    change = result.get("rank_diff", 0)
-    rank_text = result.get("rank_diff_str", "--")
-    if rank_text == "NEW":
-        return "NEW", "new"
-    if change == 0:
-        return "—", "hold"
-    return (f"+{change}", "up") if change > 0 else (f"−{abs(change)}", "down")
-
-
-def _draw_team_mark(canvas, draw, result, center_x, top_y, logo_size, slot_width, name_size, rank_size, on_dark=False):
-    label, state = _movement_label(result)
-    colors = {
-        "up": MINT if on_dark else GREEN,
-        "down": "#ff8a83" if on_dark else CORAL,
-        "new": GOLD,
-        "hold": "#91a4af" if on_dark else MUTED,
-    }
-    rank_fill = MINT if on_dark else GREEN
-    name_fill = WHITE if on_dark else INK
-    _text(draw, (center_x - 9, top_y + 9), f'#{result["rank"]}', size=rank_size, bold=True, fill=rank_fill, anchor="ra")
-    _text(draw, (center_x + 11, top_y + 9), label, size=max(10, rank_size - 7), bold=True, fill=colors[state], anchor="la")
-    logo_y = top_y + rank_size + 13
-    _paste_logo(canvas, result["team"].handle, (int(center_x - logo_size / 2), logo_y, logo_size, logo_size), frame=False)
-    name_y = logo_y + logo_size + 10
-    _draw_fitted(draw, (center_x, name_y), _team_name(result["team"]), slot_width - 12, size=name_size, min_size=10, bold=True, fill=name_fill, anchor="ma")
+def _draw_ranked_logo(canvas, draw, result, center_x, top_y, logo_size, badge_size, on_dark=False):
+    logo_x = int(center_x - logo_size / 2)
+    _paste_logo(canvas, result["team"].handle, (logo_x, top_y, logo_size, logo_size), frame=False)
+    badge_x = logo_x - int(badge_size * 0.18)
+    badge_y = top_y - int(badge_size * 0.14)
+    outline = MINT if on_dark else PAPER
+    draw.ellipse((badge_x, badge_y, badge_x + badge_size, badge_y + badge_size), fill=GREEN, outline=outline, width=3)
+    rank_size = max(13, int(badge_size * 0.32))
+    _text(draw, (badge_x + badge_size / 2, badge_y + badge_size / 2), f'#{result["rank"]}', size=rank_size, bold=True, fill=WHITE, anchor="mm")
 
 
 def _draw_empty_state(draw):
@@ -164,42 +148,42 @@ def render_post_summary(poll):
     _draw_fitted(draw, (136, 61), summary["poll"], 700, size=43, min_size=29, bold=True, fill=WHITE)
     draw.line((924, 31, 924, 105), fill="#315060", width=2)
     _text(draw, (957, 40), summary["voter_count"], size=32, bold=True, fill=WHITE)
-    _text(draw, (957, 78), "HUMAN BALLOTS", size=11, bold=True, fill="#91a4af")
+    _text(draw, (957, 78), "HUMAN BALLOTS", size=13, bold=True, fill="#91a4af")
 
     top25 = summary["top25"]
     if top25:
-        draw.rounded_rectangle((38, 158, 1162, 940), radius=28, fill=PAPER)
-        _text(draw, (66, 181), "A PLAYOFF-SIZED TOP 12", size=17, bold=True, fill=INK)
-        _text(draw, (1134, 185), "POLL RANKS  /  NOT A BRACKET", size=10, bold=True, fill=MUTED, anchor="ra")
+        draw.rounded_rectangle((38, 158, 1162, 1000), radius=28, fill=PAPER)
+        _text(draw, (66, 181), "THE TOP 12", size=23, bold=True, fill=INK)
+        _text(draw, (1134, 183), "A PLAYOFF-SIZED CUT", size=15, bold=True, fill=MUTED, anchor="ra")
 
-        rows = (
-            (top25[0:1], (600,), 198, 180, 280, 24, 25),
-            (top25[1:3], (375, 825), 426, 128, 330, 18, 21),
-            (top25[3:7], (170, 455, 745, 1030), 600, 98, 230, 15, 18),
-            (top25[7:12], (125, 362, 600, 838, 1075), 754, 84, 190, 13, 16),
+        top_rows = (
+            (top25[0:1], (600,), 205, 210, 54),
+            (top25[1:3], (350, 850), 458, 185, 48),
+            (top25[3:7], (150, 450, 750, 1050), 650, 145, 44),
+            (top25[7:12], (120, 360, 600, 840, 1080), 805, 125, 42),
         )
-        for results, centers, top_y, logo_size, slot_width, name_size, rank_size in rows:
+        for results, centers, top_y, logo_size, badge_size in top_rows:
             for result, center_x in zip(results, centers):
-                _draw_team_mark(canvas, draw, result, center_x, top_y, logo_size, slot_width, name_size, rank_size)
+                _draw_ranked_logo(canvas, draw, result, center_x, top_y, logo_size, badge_size)
+        _draw_fitted(draw, (600, 425), _team_name(top25[0]["team"]), 420, size=30, min_size=20, bold=True, fill=INK, anchor="ma")
 
-        draw.rounded_rectangle((430, 918, 770, 954), radius=18, fill=GREEN)
-        _text(draw, (600, 936), "12-TEAM CUT LINE", size=13, bold=True, fill=WHITE, anchor="mm")
+        draw.rounded_rectangle((415, 979, 785, 1021), radius=21, fill=GREEN)
+        _text(draw, (600, 1000), "12-TEAM CUT LINE", size=16, bold=True, fill=WHITE, anchor="mm")
 
-        _text(draw, (40, 982), "THE REST OF THE TOP 25", size=17, bold=True, fill=WHITE)
-        _text(draw, (1160, 986), "RANKS 13–25", size=10, bold=True, fill="#91a4af", anchor="ra")
+        _text(draw, (40, 1045), "13–25", size=23, bold=True, fill=WHITE)
         lower_rows = (
-            (top25[12:18], (110, 306, 502, 698, 894, 1090), 1004, 96, 182),
-            (top25[18:25], (90, 260, 430, 600, 770, 940, 1110), 1204, 96, 156),
+            (top25[12:18], (110, 306, 502, 698, 894, 1090), 1085, 125, 44),
+            (top25[18:25], (90, 260, 430, 600, 770, 940, 1110), 1270, 125, 44),
         )
-        for results, centers, top_y, logo_size, slot_width in lower_rows:
+        for results, centers, top_y, logo_size, badge_size in lower_rows:
             for result, center_x in zip(results, centers):
-                _draw_team_mark(canvas, draw, result, center_x, top_y, logo_size, slot_width, 14, 16, on_dark=True)
+                _draw_ranked_logo(canvas, draw, result, center_x, top_y, logo_size, badge_size, on_dark=True)
         draw.line((40, 1418, 1160, 1418), fill=SURFACE_LIGHT, width=1)
     else:
         _draw_empty_state(draw)
 
     _text(draw, (40, 1458), "POLL.REDDITCFB.COM", size=15, bold=True, fill=MINT, anchor="lm")
-    _text(draw, (1160, 1458), "THE HUMAN TOP 25", size=11, bold=True, fill="#91a4af", anchor="rm")
+    _text(draw, (1160, 1458), "THE HUMAN TOP 25", size=13, bold=True, fill="#91a4af", anchor="rm")
     output = BytesIO()
     canvas.convert("RGB").save(output, format="PNG", optimize=True)
     return output.getvalue()
