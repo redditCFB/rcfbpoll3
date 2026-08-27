@@ -88,6 +88,7 @@ body {
 }
 
 .analysis-beeswarm { min-width: 0; }
+.beeswarm-copy-mobile { display: none; }
 .analysis-beeswarm-chart { position: relative; width: 100%; overflow: visible; }
 .analysis-beeswarm-chart svg { display: block; width: 100%; height: auto; }
 .analysis-beeswarm-chart .team-marker { cursor: pointer; }
@@ -128,4 +129,10 @@ body {
     #conference-teams {
         width: 100%;
     }
+}
+
+@media (max-width: 767.98px) {
+    .analysis-tables-row { margin-left: 0; margin-right: 0; }
+    .beeswarm-copy-desktop { display: none; }
+    .beeswarm-copy-mobile { display: inline; }
 }

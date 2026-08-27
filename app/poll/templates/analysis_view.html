@@ -31,11 +31,11 @@
         </div>
         <section class="analysis-beeswarm py-3" aria-labelledby="beeswarm-heading">
             <h2 id="beeswarm-heading" class="h4 text-center">Top 30 Teams by Points per Voter</h2>
-            <p class="text-center mb-2">Horizontal position represents points per voter (PPV). Vertical position is used only to separate overlapping teams. Teams outside the Top 25 are shown faded.</p>
+            <p class="text-center mb-2"><span class="beeswarm-copy-desktop">Horizontal position represents points per voter (PPV). Vertical position is used only to separate overlapping teams. Teams outside the Top 25 are shown faded.</span><span class="beeswarm-copy-mobile">Vertical position represents points per voter (PPV). Horizontal position is used only to separate overlapping teams. Teams outside the Top 25 are shown faded.</span></p>
             <div id="analysis-beeswarm" data-logo-url-template="{% team_logo_url '{handle}' %}"></div>
             {{ chart_results|json_script:"analysis-beeswarm-data" }}
         </section>
-        <div class="row flex-lg-row g-5 py-3">
+        <div class="row analysis-tables-row flex-lg-row g-5 py-3">
 			<div class="col-md-12 col-lg-4 d-lg-flex flex-column">
 				<h4 class="text-center py-2">Least Agreed Upon Teams</h4>
                 <table class="table table-striped">
