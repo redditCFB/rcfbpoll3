@@ -295,6 +295,15 @@ def analysis_view(request, poll_id):
     include_provisional = request.GET.get('include_provisional', False)
 
     results = get_result_set(this_poll, {'provisional': include_provisional})
+    chart_results = [
+        {
+            'rank': result.rank,
+            'team_name': result.team.name,
+            'team_handle': result.team.handle,
+            'points_per_voter': result.points_per_voter,
+        }
+        for result in results[:30]
+    ]
 
     ballots = Ballot.objects.filter(poll=this_poll, submission_date__isnull=False).order_by(Lower('user__username'))
     if not include_provisional:
@@ -319,6 +328,7 @@ def analysis_view(request, poll_id):
         'most_unusual': most_unusual,
         'least_unusual': least_unusual,
         'most_disagreed': most_disagreed,
+        'chart_results': chart_results,
         'polls': polls
     })
 

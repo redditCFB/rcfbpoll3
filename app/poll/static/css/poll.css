@@ -87,6 +87,22 @@ body {
 	horiz-align: center;
 }
 
+.analysis-beeswarm { min-width: 0; }
+.beeswarm-copy-mobile { display: none; }
+.analysis-beeswarm-chart { position: relative; width: 100%; overflow: visible; }
+.analysis-beeswarm-chart svg { display: block; width: 100%; height: auto; }
+.analysis-beeswarm-chart .team-marker { cursor: pointer; }
+.analysis-beeswarm-tooltip {
+    position: absolute;
+    z-index: 10;
+    padding: 0.4rem 0.55rem;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 0.25rem;
+    white-space: pre-line;
+    pointer-events: none;
+}
+
 #conference-teams {
     min-width: 0;
 }
@@ -113,4 +129,10 @@ body {
     #conference-teams {
         width: 100%;
     }
+}
+
+@media (max-width: 767.98px) {
+    .analysis-tables-row { margin-left: 0; margin-right: 0; }
+    .beeswarm-copy-desktop { display: none; }
+    .beeswarm-copy-mobile { display: inline; }
 }
