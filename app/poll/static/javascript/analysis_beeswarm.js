@@ -35,9 +35,10 @@
             node.y = candidates.find(candidate => nodes
                 .slice(0, index)
                 .every(previous => {
-                    const dx = Math.abs(node.x - previous.x);
-                    const dy = Math.abs(candidate - previous.y);
-                    return dx >= markerDiameter || dy >= markerDiameter;
+                    const dx = node.x - previous.x;
+                    const dy = candidate - previous.y;
+                    const epsilon = 1e-7;
+                    return Math.hypot(dx, dy) >= markerDiameter - epsilon;
                 }));
         });
         return nodes;
