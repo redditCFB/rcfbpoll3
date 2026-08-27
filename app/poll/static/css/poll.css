@@ -88,7 +88,7 @@ body {
 }
 
 .analysis-beeswarm { min-width: 0; }
-.analysis-beeswarm-chart { width: 100%; overflow: hidden; }
+.analysis-beeswarm-chart { position: relative; width: 100%; overflow: visible; }
 .analysis-beeswarm-chart svg { display: block; width: 100%; height: auto; }
 .analysis-beeswarm-chart .team-marker { cursor: pointer; }
 .analysis-beeswarm-tooltip {
