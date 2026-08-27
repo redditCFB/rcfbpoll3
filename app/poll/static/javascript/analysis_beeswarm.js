@@ -19,14 +19,26 @@
     function fixedXBeeswarm(nodes) {
         nodes.sort((a, b) => a.x - b.x || a.rank - b.rank);
         nodes.forEach((node, index) => {
-            node.y = 0;
+            const candidates = [0];
+
             for (let previousIndex = 0; previousIndex < index; previousIndex += 1) {
                 const previous = nodes[previousIndex];
                 const dx = Math.abs(node.x - previous.x);
                 if (dx < markerDiameter) {
-                    node.y = Math.max(node.y, previous.y + markerDiameter);
+                    const dy = Math.sqrt(markerDiameter ** 2 - dx ** 2);
+                    candidates.push(previous.y + dy, previous.y - dy);
+                    candidates.push(previous.y + markerDiameter, previous.y - markerDiameter);
                 }
             }
+
+            candidates.sort((a, b) => Math.abs(a) - Math.abs(b) || a - b);
+            node.y = candidates.find(candidate => nodes
+                .slice(0, index)
+                .every(previous => {
+                    const dx = Math.abs(node.x - previous.x);
+                    const dy = Math.abs(candidate - previous.y);
+                    return dx >= markerDiameter || dy >= markerDiameter;
+                }));
         });
         return nodes;
     }
@@ -42,9 +54,11 @@
             ...result,
             x: x(result.points_per_voter),
         })));
+        const minY = d3.min(nodes, node => node.y) || 0;
         const maxY = d3.max(nodes, node => node.y) || 0;
         const plotTop = margin.top + markerSize / 2;
-        const height = Math.max(150, plotTop + maxY + markerSize / 2 + axisHeight);
+        const swarmHeight = maxY - minY;
+        const height = Math.max(150, plotTop + swarmHeight + markerSize / 2 + axisHeight);
         const axisY = height - margin.bottom;
 
         d3.select(container).selectAll('.analysis-beeswarm-chart').remove();
@@ -91,7 +105,7 @@
         svg.selectAll('image').data(nodes).join('image')
             .attr('class', 'team-marker')
             .attr('x', node => node.x - markerSize / 2)
-            .attr('y', node => plotTop + node.y - markerSize / 2)
+            .attr('y', node => plotTop + node.y - minY - markerSize / 2)
             .attr('width', markerSize)
             .attr('height', markerSize)
             .attr('preserveAspectRatio', 'xMidYMid meet')
