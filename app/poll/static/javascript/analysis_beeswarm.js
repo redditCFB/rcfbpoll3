@@ -11,7 +11,7 @@
     const markerDiameter = markerSize + markerGap;
     const axisHeight = 42;
     const horizontalPadding = 12;
-    const mobileBreakpoint = 768;
+    const mobileMediaQuery = window.matchMedia('(max-width: 767.98px)');
     const mobilePlotHeight = 560;
     const epsilon = 1e-7;
 
@@ -76,7 +76,7 @@
 
     function render() {
         const width = Math.max(container.clientWidth, 1);
-        const mobile = width < mobileBreakpoint;
+        const mobile = mobileMediaQuery.matches;
         const margin = mobile
             ? { top: 8, right: horizontalPadding, bottom: 8, left: 52 }
             : { top: 8, right: horizontalPadding, bottom: axisHeight, left: horizontalPadding };
@@ -186,9 +186,15 @@
     }
 
     let resizeFrame;
-    new ResizeObserver(() => {
+    function scheduleRender() {
         cancelAnimationFrame(resizeFrame);
         resizeFrame = requestAnimationFrame(render);
-    }).observe(container);
+    }
+    new ResizeObserver(scheduleRender).observe(container);
+    if (mobileMediaQuery.addEventListener) {
+        mobileMediaQuery.addEventListener('change', scheduleRender);
+    } else {
+        mobileMediaQuery.addListener(scheduleRender);
+    }
     render();
 }());
