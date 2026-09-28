@@ -36,9 +36,16 @@ Local development installs the locked `app/requirements-dev.txt`, which includes
 the runtime requirements, Debug Toolbar, and flake8. Runtime/production images
 install only the locked `app/requirements.txt`; Debug Toolbar is enabled only
 when `DEBUG=1`. Edit the corresponding `.in` files and regenerate both locks
-with `uv pip compile` using Python 3.13 before changing dependencies. Rebuild
-the development image after changing dependencies, then run the local lint
-check with:
+using Python 3.13 before changing dependencies:
+
+```sh
+cd app
+uv pip compile requirements.in --python 3.13 --universal -o requirements.txt
+uv pip compile requirements-dev.in --python 3.13 --universal -o requirements-dev.txt
+```
+
+Rebuild the development image after changing dependencies, then run the local
+lint check with:
 
 ```sh
 docker compose run --rm --no-deps --entrypoint flake8 poll .

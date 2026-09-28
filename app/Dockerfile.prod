@@ -1,10 +1,10 @@
-FROM python:3.13-slim-bookworm AS builder
+FROM python:3.13-slim-bookworm@sha256:2325bb286ec344af3e5898cc224b5844e2707ac6e26b1632516fd3edc84a5e26 AS builder
 
 WORKDIR /usr/src/app
 COPY requirements.txt ./
 RUN python -m pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
-FROM python:3.13-slim-bookworm
+FROM python:3.13-slim-bookworm@sha256:2325bb286ec344af3e5898cc224b5844e2707ac6e26b1632516fd3edc84a5e26
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 ENV HOME=/home/app APP_HOME=/home/app/poll
@@ -20,7 +20,7 @@ RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels -r requ
 COPY entrypoint.sh ./
 RUN sed -i 's/\r$//g' entrypoint.sh && chmod +x entrypoint.sh
 COPY . .
-RUN chown -R app:app "$APP_HOME"
+RUN chown -R app:app "$HOME"
 USER app
 
 ENTRYPOINT ["/home/app/poll/entrypoint.sh"]

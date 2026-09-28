@@ -7,10 +7,11 @@ PostgreSQL 18 image's volume root. The legacy `docker-compose.prod.yml` path
 also keeps its old `postgres_data` volume. Neither old volume is an in-place
 upgrade target.
 
-The person running this procedure needs the deployment checkout, access to the
-existing Compose project, enough private disk space for a fresh dump, and a
-maintenance window. Replace the project name below with the value shown by
-`docker compose ls` for the current deployment. Keep the same name throughout
+The person running this procedure needs the old and proposed deployment
+checkouts, access to the existing Compose project, enough private durable disk
+space for a fresh dump, and a maintenance window. Replace the project name
+below with the value shown by `docker compose ls` for the current deployment.
+Keep the same name throughout
 the cutover so Compose finds the existing volumes. Run commands from the
 repository root. Restrict the backup directory to operators; it contains live
 credentials and user data. Do not put dumps or snapshots in Git.
@@ -18,23 +19,28 @@ credentials and user data. Do not put dumps or snapshots in Git.
 ```sh
 export POLL_PROJECT=rcfbpoll3
 export POLL_COMPOSE=docker-compose.staging.yml
-export POLL_BACKUP_DIR="$(mktemp -d /tmp/rcfbpoll-pg18.XXXXXXXX)"
-chmod 700 "$POLL_BACKUP_DIR"
+export POLL_BACKUP_DIR=/path/to/private-durable-backup/rcfbpoll-pg18-2026-09-28
+install -d -m 700 "$POLL_BACKUP_DIR"
+cp /path/to/proposed-checkout/docs/postgres18-snapshot.sql "$POLL_BACKUP_DIR/snapshot.sql"
 ```
 
 ## Rehearse with a fresh copy of production data
 
-Before scheduling the live cutover, take a current PG17 dump from the running
-deployment using the **old** checkout and existing Compose file. An earlier
-sanitized local fixture does not establish compatibility with production data.
-The rehearsal can run while writes remain live; it does not replace the fresh
-post-freeze dump required below. Transfer the dump securely if rehearsal runs
-on a different host.
+Before scheduling the live cutover, briefly freeze all writers and take a
+current PG17 dump and source snapshot from the running deployment using the
+**old** checkout and existing Compose file. Resume writes after both are
+captured. An earlier sanitized local fixture does not establish compatibility
+with production data. This rehearsal dump does not replace the fresh
+post-freeze dump required below. Transfer it securely if rehearsal runs on a
+different host.
 
 ```sh
 docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" exec -T db sh -c \
   'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"' \
   > "$POLL_BACKUP_DIR/rehearsal.dump"
+docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" exec -T db sh -c \
+  'psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < "$POLL_BACKUP_DIR/snapshot.sql" > "$POLL_BACKUP_DIR/rehearsal-source.csv"
 pg_restore -l "$POLL_BACKUP_DIR/rehearsal.dump" > /dev/null
 sha256sum "$POLL_BACKUP_DIR/rehearsal.dump" > "$POLL_BACKUP_DIR/rehearsal.sha256"
 ```
@@ -47,26 +53,30 @@ Reddit, so do not run that service on a production-data rehearsal.
 
 ```sh
 export POLL_REHEARSAL_PROJECT="${POLL_PROJECT}-pg18-rehearsal"
+docker compose -p "$POLL_REHEARSAL_PROJECT" -f "$POLL_COMPOSE" build migrate
 docker compose -p "$POLL_REHEARSAL_PROJECT" -f "$POLL_COMPOSE" up -d db
 docker compose -p "$POLL_REHEARSAL_PROJECT" -f "$POLL_COMPOSE" exec -T db sh -c \
   'pg_restore --exit-on-error --no-owner --no-privileges -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
   < "$POLL_BACKUP_DIR/rehearsal.dump"
 docker compose -p "$POLL_REHEARSAL_PROJECT" -f "$POLL_COMPOSE" exec -T db sh -c \
   'psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
-  < docs/postgres18-snapshot.sql > "$POLL_BACKUP_DIR/rehearsal-restored.csv"
+  < "$POLL_BACKUP_DIR/snapshot.sql" > "$POLL_BACKUP_DIR/rehearsal-restored.csv"
+diff -u "$POLL_BACKUP_DIR/rehearsal-source.csv" "$POLL_BACKUP_DIR/rehearsal-restored.csv"
 docker compose -p "$POLL_REHEARSAL_PROJECT" -f "$POLL_COMPOSE" run --rm --no-deps \
   --entrypoint python migrate manage.py migrate --noinput
 docker compose -p "$POLL_REHEARSAL_PROJECT" -f "$POLL_COMPOSE" run --rm --no-deps \
   --entrypoint python migrate manage.py migrate --check
 ```
 
-The source snapshot uses the same `docs/postgres18-snapshot.sql` command shown
-below, against the original database. Compare it with
-`rehearsal-restored.csv` using `diff -u`. Investigate every mismatch, failed
-restore, or migration error before proceeding. Record the rehearsal date,
+Investigate every snapshot mismatch, failed restore, or migration error before
+proceeding. Record the rehearsal date,
 source PostgreSQL version, row counts, migration output, and application image
 revision in the deployment record. No production-data rehearsal has been
 performed by this PR's local validation.
+
+Before the live window, build the proposed `poll` and `migrate` images and
+verify the full application test suite against the final revision. Keep those
+images available for the cutover.
 
 ## Live cutover
 
@@ -81,7 +91,7 @@ performed by this PR's local validation.
      > "$POLL_BACKUP_DIR/pg17-final.dump"
    docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" exec -T db sh -c \
      'psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
-     < docs/postgres18-snapshot.sql > "$POLL_BACKUP_DIR/source.csv"
+     < "$POLL_BACKUP_DIR/snapshot.sql" > "$POLL_BACKUP_DIR/source.csv"
    pg_restore -l "$POLL_BACKUP_DIR/pg17-final.dump" > /dev/null
    sha256sum "$POLL_BACKUP_DIR/pg17-final.dump" > "$POLL_BACKUP_DIR/pg17-final.sha256"
    ```
@@ -107,7 +117,7 @@ performed by this PR's local validation.
      < "$POLL_BACKUP_DIR/pg17-final.dump"
    docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" exec -T db sh -c \
      'psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
-     < docs/postgres18-snapshot.sql > "$POLL_BACKUP_DIR/restored.csv"
+     < "$POLL_BACKUP_DIR/snapshot.sql" > "$POLL_BACKUP_DIR/restored.csv"
    diff -u "$POLL_BACKUP_DIR/source.csv" "$POLL_BACKUP_DIR/restored.csv"
    ```
 
@@ -116,11 +126,14 @@ performed by this PR's local validation.
    static files. Verify no migrations remain, then bring up the application:
 
    ```sh
-   docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" up -d --build migrate
-   docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" ps -a migrate
+   docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" up -d migrate
+   POLL_MIGRATE_ID="$(docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" ps -a -q migrate)"
+   test -n "$POLL_MIGRATE_ID"
+   while [ "$(docker inspect -f '{{.State.Running}}' "$POLL_MIGRATE_ID")" = true ]; do sleep 2; done
+   test "$(docker inspect -f '{{.State.ExitCode}}' "$POLL_MIGRATE_ID")" -eq 0
    docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" run --rm --no-deps \
      --entrypoint python migrate manage.py migrate --check
-   docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" up -d --build poll nginx-proxy nginx-proxy-letsencrypt
+   docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" up -d poll nginx-proxy nginx-proxy-letsencrypt
    ```
 
 5. Before reopening writes, smoke-test a normal login and logout, Reddit
@@ -138,7 +151,15 @@ restore the old checkout and old Compose definition, and start the old PG17
 database and application against the preserved old volume. If new writes have
 occurred, reconcile them before reverting traffic.
 
-The unused `docker-compose.prod.yml` path follows the same procedure, but its
-old database image is PostgreSQL 13 and its preserved volume is
-`postgres_data`. Use a dump made with that running source server rather than
-assuming it is PG17.
+The unused `docker-compose.prod.yml` path follows the same dump, new-volume,
+restore, snapshot, and smoke-test procedure, but its old database image is
+PostgreSQL 13 and its preserved volume is `postgres_data`. Use a dump made
+with that running source server rather than assuming it is PG17. It has no
+`migrate` service. After comparing snapshots, run these commands before
+starting `poll` and `nginx`:
+
+```sh
+docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" run --rm --no-deps poll python manage.py migrate --noinput
+docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" run --rm --no-deps poll python manage.py collectstatic --noinput
+docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" run --rm --no-deps poll python manage.py migrate --check
+```
