@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   nginx-proxy:
     container_name: nginx-proxy
@@ -56,7 +54,7 @@ services:
     depends_on:
       - db
   db:
-    image: postgres:18.4-alpine
+    image: postgres:18.4-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
     volumes:
       - postgres_data18:/var/lib/postgresql
     env_file:

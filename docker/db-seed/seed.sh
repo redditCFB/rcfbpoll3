@@ -28,7 +28,7 @@ trap 'rm -f "$archive"' EXIT
 echo "Downloading local poll fixture..."
 curl --fail --location --retry 3 --retry-delay 1 --output "$archive" "$FIXTURE_URL"
 
-printf '%s  %s\n' "$FIXTURE_SHA256" "$archive" | sha256sum -c -s -
+printf '%s  %s\n' "$FIXTURE_SHA256" "$archive" | sha256sum -c -
 echo "Fixture checksum verified."
 
 pg_restore \

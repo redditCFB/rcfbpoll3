@@ -22,9 +22,9 @@ services:
         condition: service_completed_successfully
 
   db:
-    image: postgres:18.4-alpine
+    image: postgres:18.4-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data18:/var/lib/postgresql
     environment:
       - POSTGRES_USER=rcfbpoll
       - POSTGRES_PASSWORD=rcfbpoll
@@ -51,4 +51,4 @@ services:
     restart: "no"
 
 volumes:
-  postgres_data:
+  postgres_data18:
