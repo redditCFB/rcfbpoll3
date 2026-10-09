@@ -2,7 +2,7 @@
 {% load static team_logo %}
 {% block content %}
     <div class="container">
-        <div class="row flex-lg-row align-items-center g-5 py-5">
+        <div class="row flex-lg-row align-items-center gx-4 gy-5 py-5">
             <div class="col-md-4 col-xs-6">
                 <img id="main-logo" class="img-fluid" src="{% static 'images/poll.png' %}" alt="">
             </div>
@@ -14,10 +14,11 @@
         </div>
     </div>
 	<div class="container">
-		<div class="row flex-lg-row g-5 py-5">
+		<div class="row flex-lg-row gx-4 gy-5 py-5">
 			<div class="col-md-12 col-lg-6 d-flex flex-column">
 				<h2>Current Top 25</h2>
 				<h3>{{ poll.year }} {{ poll.week }}</h3>
+                <div class="table-responsive">
                 <table class="table table-striped" style="width: auto;" id="current-results">
                     <tr>
                         <th>Rank</th>
@@ -48,6 +49,7 @@
                         </tr>
                     {% endfor %}
                 </table>
+                </div>
                 {% if dropped and dropped.count > 0 %}
                     <p>
                         <strong>Dropped:</strong>
@@ -64,8 +66,9 @@
                 </p>
 			</div>
 			<div class="col-md-12 col-lg-6 d-flex flex-column">
-				<h2>Biggest Movers</h2>
+                <h2>Biggest Movers</h2>
 				<h3>Moving Up</h3>
+                <div class="table-responsive">
                 <table class="table table-striped" style="width: auto;">
                     <tr>
                         <th>Rank</th>
@@ -89,7 +92,9 @@
                         </tr>
                     {% endfor %}
                 </table>
+                </div>
                 <h3>Falling Down</h3>
+                <div class="table-responsive">
                 <table class="table table-striped" style="width: auto;">
                     <tr>
                         <th>Rank</th>
@@ -113,6 +118,7 @@
                         </tr>
                     {% endfor %}
                 </table>
+                </div>
 			</div>
 		</div>
         <div>
