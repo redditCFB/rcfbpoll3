@@ -24,6 +24,13 @@ body {
     }
 }
 
+@media (max-width: 359.98px) {
+    .poll-filter-compact-options {
+        gap: 0.25rem;
+        font-size: 0.875rem;
+    }
+}
+
 #welcome {
 	text-align: center;
 }
