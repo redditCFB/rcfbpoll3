@@ -130,20 +130,20 @@ body {
 .poll-results-mobile-table th {
     padding-right: 0.1rem;
     padding-left: 0.1rem;
-    font-size: 0.7rem;
+    font-size: inherit;
     white-space: nowrap;
 }
 
 .poll-results-mobile-rank-column {
-    width: 12%;
+    width: 13%;
 }
 
 .poll-results-mobile-change-column {
-    width: 18%;
+    width: 20%;
 }
 
 .poll-results-mobile-team-column {
-    width: 52%;
+    width: 49%;
 }
 
 .poll-results-mobile-points-column {
@@ -195,7 +195,7 @@ body {
 }
 
 .poll-results-mobile-team > a {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
