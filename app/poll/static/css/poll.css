@@ -107,6 +107,129 @@ body {
     min-width: 0;
 }
 
+.poll-results-mobile {
+    overflow: visible;
+}
+
+.poll-results-mobile-table {
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 0;
+}
+
+.poll-results-mobile-table th,
+.poll-results-mobile-table td {
+    padding: 0.35rem 0.1rem;
+    vertical-align: middle;
+}
+
+.poll-results-mobile-table tbody td {
+    vertical-align: top;
+}
+
+.poll-results-mobile-table th {
+    padding-right: 0.1rem;
+    padding-left: 0.1rem;
+    font-size: inherit;
+    white-space: nowrap;
+}
+
+.poll-results-mobile-rank-column {
+    width: 13%;
+}
+
+.poll-results-mobile-change-column {
+    width: 20%;
+}
+
+.poll-results-mobile-team-column {
+    width: 49%;
+}
+
+.poll-results-mobile-points-column {
+    width: 18%;
+}
+
+.poll-results-mobile-details > summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+    cursor: pointer;
+    list-style: none;
+    white-space: nowrap;
+}
+
+.poll-results-mobile-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.poll-results-mobile-details > summary::before {
+    flex: 0 0 0.75rem;
+    color: #6c757d;
+    content: "▸";
+    line-height: 1;
+    text-align: center;
+}
+
+.poll-results-mobile-details[open] > summary::before {
+    content: "▾";
+}
+
+.poll-results-mobile-team {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.poll-results-mobile-team .team-logo {
+    display: block;
+    flex: 0 0 auto;
+    width: auto;
+    height: 25px;
+    margin-left: 0;
+}
+
+.poll-results-mobile-team > a {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.poll-results-mobile-first-votes {
+    flex: 0 0 auto;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.poll-results-mobile-stats {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.25rem 0.5rem;
+    margin: 0.35rem 0 0;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.25rem;
+    background-color: #f8f9fa;
+    font-size: 0.75rem;
+}
+
+.poll-results-mobile-stats dt {
+    color: #6c757d;
+    font-weight: 400;
+}
+
+.poll-results-mobile-stats dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+}
+
 .poll-index-mobile-list {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
