@@ -311,7 +311,9 @@ body {
 }
 
 .poll-section-nav .nav-link {
-    padding: 0.5rem 0.25rem;
+    padding: 0.5rem 0.125rem;
+    font-size: clamp(1.125rem, 5.5vw, 1.5rem);
+    font-weight: 600;
     text-align: center;
     white-space: nowrap;
 }
