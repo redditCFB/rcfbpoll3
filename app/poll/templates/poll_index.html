@@ -46,7 +46,7 @@
                             <div class="poll-index-mobile-heading">
                                 <h4 class="poll-index-mobile-week">{{ poll.week }}</h4>
                                 {% localtime on %}
-                                    <span class="poll-index-mobile-published"><span class="poll-index-mobile-label">Published: </span>{{ poll.publish_date }}</span>
+                                    <time class="poll-index-mobile-published" datetime="{{ poll.publish_date|date:'c' }}">{{ poll.publish_date|date:"M j" }} · {{ poll.publish_date|time:"g:i a" }}</time>
                                 {% endlocaltime %}
                             </div>
                             <div class="poll-index-mobile-team">
