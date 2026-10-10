@@ -13,15 +13,7 @@
                 {% endfor %}
             </ul>
         </div>
-        <nav class="nav py-3">
-            <h4><a class="nav-link" href="/poll/view/{{ this_poll.id }}/">Results</a></h4>
-            <div class="vr"></div>
-            <h4><a class="nav-link" href="/poll/voters/{{ this_poll.id }}/">Voters</a></h4>
-            <div class="vr"></div>
-            <h4><a class="nav-link disabled" href="/poll/ballots/{{ this_poll.id }}/1/">Ballots</a></h4>
-            <div class="vr"></div>
-            <h4><a class="nav-link" href="/poll/analysis/{{ this_poll.id }}/">Analysis</a></h4>
-        </nav>
+        {% include 'poll_section_nav.html' with active_section='ballots' %}
         <div>
             {% if user_type == 1 %}
                 <h4>Main Voter Ballots</h4>

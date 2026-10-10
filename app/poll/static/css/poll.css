@@ -304,6 +304,22 @@ body {
     white-space: nowrap;
 }
 
+.poll-section-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-block: 1px solid #dee2e6;
+}
+
+.poll-section-nav .nav-link {
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.poll-section-nav .nav-link + .nav-link {
+    border-inline-start: 1px solid #dee2e6;
+}
+
 @media (max-width: 1399.98px) {
     #team-picker {
         flex-direction: column;
