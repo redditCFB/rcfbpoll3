@@ -123,45 +123,73 @@ body {
     vertical-align: middle;
 }
 
+.poll-results-mobile-table tbody td {
+    vertical-align: top;
+}
+
 .poll-results-mobile-table th {
     padding-right: 0.1rem;
     padding-left: 0.1rem;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     white-space: nowrap;
 }
 
 .poll-results-mobile-rank-column {
-    width: 13%;
-}
-
-.poll-results-mobile-team-column {
-    width: 39%;
+    width: 12%;
 }
 
 .poll-results-mobile-change-column {
-    width: 19%;
+    width: 18%;
+}
+
+.poll-results-mobile-team-column {
+    width: 52%;
 }
 
 .poll-results-mobile-points-column {
-    width: 17%;
+    width: 18%;
 }
 
-.poll-results-mobile-first-column {
-    width: 12%;
+.poll-results-mobile-details > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: pointer;
+    list-style: none;
+}
+
+.poll-results-mobile-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.poll-results-mobile-details > summary::before {
+    flex: 0 0 0.75rem;
+    color: #6c757d;
+    content: "▸";
+    line-height: 1;
+    text-align: center;
+}
+
+.poll-results-mobile-details[open] > summary::before {
+    content: "▾";
 }
 
 .poll-results-mobile-team {
     display: flex;
+    flex: 1 1 auto;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.3rem;
     min-width: 0;
+    max-width: 100%;
 }
 
 .poll-results-mobile-team .team-logo {
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+    display: block;
+    flex: 0 0 25px;
+    width: 25px;
+    height: 25px;
     margin-left: 0;
+    object-fit: contain;
 }
 
 .poll-results-mobile-team > a {
@@ -172,38 +200,29 @@ body {
     white-space: nowrap;
 }
 
-.poll-results-mobile-more {
+.poll-results-mobile-first-votes {
     flex: 0 0 auto;
-    padding: 0.12rem 0.2rem;
-    border: 0;
-    font-size: 0.7rem;
-    line-height: 1.2;
+    font-size: 0.85rem;
+    white-space: nowrap;
 }
 
-.poll-results-mobile-more.dropdown-toggle::after {
-    display: none;
-}
-
-.poll-results-mobile-menu {
-    z-index: 1080;
-    width: min(220px, calc(100vw - 1.5rem));
-    padding: 0.55rem 0.7rem;
-    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
-}
-
-.poll-results-mobile-menu dl {
+.poll-results-mobile-stats {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.3rem 0.75rem;
-    margin: 0;
+    gap: 0.25rem 0.5rem;
+    margin: 0.35rem 0 0;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.25rem;
+    background-color: #f8f9fa;
+    font-size: 0.75rem;
 }
 
-.poll-results-mobile-menu dt {
+.poll-results-mobile-stats dt {
     color: #6c757d;
     font-weight: 400;
 }
 
-.poll-results-mobile-menu dd {
+.poll-results-mobile-stats dd {
     margin: 0;
     font-weight: 600;
     text-align: right;

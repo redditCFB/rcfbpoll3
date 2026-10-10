@@ -5,8 +5,8 @@ from django.test import SimpleTestCase
 
 
 class PollViewTemplateTests(SimpleTestCase):
-    def test_mobile_results_use_compact_table_with_secondary_stats_in_dropdown(self):
-        team = SimpleNamespace(id=4, handle='test-team', name='Test Team')
+    def test_mobile_results_use_full_table_order_and_expandable_secondary_stats(self):
+        team = SimpleNamespace(id=4, handle='test-team', name='Test Team', short_name='TEST')
         rank = SimpleNamespace(
             rank=1,
             baseline_diff=2,
@@ -46,12 +46,20 @@ class PollViewTemplateTests(SimpleTestCase):
         self.assertIn('class="table-responsive py-3 d-none d-md-block"', rendered)
         self.assertIn('class="poll-results-mobile d-md-none py-3"', rendered)
         self.assertIn('class="table table-sm table-striped table-bordered poll-results-mobile-table"', mobile_results)
-        for label in ('Rank', 'Team', 'Change', 'Points', '#1'):
+        for label in ('Rank', 'Change', 'Team (#1 Votes)', 'Points'):
             self.assertIn(f'scope="col">{label}</th>', mobile_results)
-        self.assertIn('aria-label="More stats for Test Team"', mobile_results)
+        self.assertLess(mobile_results.index('scope="col">Rank'), mobile_results.index('scope="col">Change'))
+        self.assertLess(mobile_results.index('scope="col">Change'), mobile_results.index('scope="col">Team (#1 Votes)'))
+        self.assertLess(mobile_results.index('scope="col">Team (#1 Votes)'), mobile_results.index('scope="col">Points'))
+        self.assertIn('TEST', mobile_results)
+        self.assertNotIn('Test Team', mobile_results)
+        self.assertIn('aria-label="1 first-place votes"', mobile_results)
+        self.assertIn('(1)', mobile_results)
+        self.assertIn('<details class="poll-results-mobile-details">', mobile_results)
+        self.assertNotIn('dropdown-menu', mobile_results)
+        self.assertNotIn('>Stats<', mobile_results)
         self.assertIn('<td class="text-center text-success">+1</td>', mobile_results)
         self.assertIn('<td class="text-center">100</td>', mobile_results)
-        self.assertIn('<td class="text-center">1</td>', mobile_results)
         for label in ('Baseline change', 'PPV', 'Δ PPV', 'σ', '# Votes'):
             self.assertIn(f'<dt>{label}</dt>', mobile_results)
         for value in (
