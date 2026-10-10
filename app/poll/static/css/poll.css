@@ -107,6 +107,76 @@ body {
     min-width: 0;
 }
 
+.poll-index-mobile-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+}
+
+.poll-index-mobile-card {
+    min-width: 0;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #fff;
+}
+
+.poll-index-mobile-heading {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+}
+
+.poll-index-mobile-week {
+    flex: 0 0 auto;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.poll-index-mobile-published {
+    text-align: left;
+    white-space: nowrap;
+}
+
+.poll-index-mobile-label {
+    color: #6c757d;
+}
+
+.poll-index-mobile-team {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    margin: 0.45rem 0;
+    white-space: nowrap;
+}
+
+.poll-index-mobile-team .team-logo {
+    flex: 0 0 auto;
+    margin-left: 0;
+}
+
+.poll-index-mobile-team-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.poll-index-mobile-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.25rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid #dee2e6;
+    text-align: center;
+}
+
+.poll-index-mobile-actions a {
+    white-space: nowrap;
+}
+
 @media (max-width: 1399.98px) {
     #team-picker {
         flex-direction: column;

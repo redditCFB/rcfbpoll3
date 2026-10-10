@@ -6,7 +6,7 @@
         <h1>Poll Index</h1>
         {% for year in years %}
             <h3>{{ year }}</h3>
-            <div class="table-responsive">
+            <div class="table-responsive d-none d-md-block">
                 <table class="table table-striped" style="width: auto;">
                     <thead>
                         <tr>
@@ -38,6 +38,30 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+            <div class="poll-index-mobile-list d-md-none">
+                {% for poll in polls %}
+                    {% if poll.year == year %}
+                        <article class="poll-index-mobile-card">
+                            <div class="poll-index-mobile-heading">
+                                <h4 class="poll-index-mobile-week">{{ poll.week }}</h4>
+                                {% localtime on %}
+                                    <span class="poll-index-mobile-published"><span class="poll-index-mobile-label">Published: </span>{{ poll.publish_date }}</span>
+                                {% endlocaltime %}
+                            </div>
+                            <div class="poll-index-mobile-team">
+                                <span class="poll-index-mobile-label">#1 Team:</span>
+                                <img class="team-logo" src="{% team_logo_url poll.top_team.handle %}" alt="">
+                                <span class="poll-index-mobile-team-name">{{ poll.top_team.short_name }}</span>
+                            </div>
+                            <nav class="poll-index-mobile-actions" aria-label="{{ poll.week }} links">
+                                <a href="/poll/voters/{{ poll.id }}/">Voters</a>
+                                <a href="/poll/ballots/{{ poll.id }}/">Ballots</a>
+                                <a href="/poll/analysis/{{ poll.id }}/">Analysis</a>
+                            </nav>
+                        </article>
+                    {% endif %}
+                {% endfor %}
             </div>
         {% endfor %}
     </div>
