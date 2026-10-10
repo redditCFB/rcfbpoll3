@@ -1,17 +1,31 @@
 #!/bin/sh
+set -eu
 
-if [ "$DATABASE" = "postgres" ]
-then
-    echo "Waiting for postgres..."
+if [ "${DATABASE:-}" = "postgres" ]; then
+    python - <<'PY'
+import os
+import time
 
-    while ! nc -z $SQL_HOST $SQL_PORT; do
-      sleep 0.1
-    done
+import psycopg
 
-    echo "PostgreSQL started"
+for attempt in range(60):
+    try:
+        with psycopg.connect(
+            host=os.environ['SQL_HOST'],
+            port=os.environ.get('SQL_PORT', '5432'),
+            dbname=os.environ['SQL_DATABASE'],
+            user=os.environ['SQL_USER'],
+            password=os.environ['SQL_PASSWORD'],
+            connect_timeout=2,
+        ) as connection:
+            connection.execute('SELECT 1')
+        print('PostgreSQL is ready for queries.', flush=True)
+        break
+    except psycopg.OperationalError as error:
+        if attempt == 59:
+            raise SystemExit(f'PostgreSQL did not become ready: {error}')
+        time.sleep(1)
+PY
 fi
-
-# python manage.py flush --no-input
-# python manage.py migrate
 
 exec "$@"

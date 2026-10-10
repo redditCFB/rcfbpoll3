@@ -13,7 +13,8 @@ for a future dynamic moderator lookup.
 After migrations, the production deployment's migrate service runs
 screen_open_provisional_applications to reconsider existing OPEN applications.
 The file docker-compose.staging.yml is currently the real production
-deployment despite its name.
+deployment despite its name. Follow [the PostgreSQL 18 cutover procedure](docs/postgres18-cutover.md)
+before deploying a version that switches the database image or volume.
 
 
 ## Local development
@@ -31,11 +32,20 @@ restores it to the local PostgreSQL volume, and applies any outstanding Django
 migrations. Later starts reuse the volume and do not download or overwrite
 data.
 
-Local development installs `app/requirements-dev.txt`, which includes the
-runtime requirements from `app/requirements.txt`, Debug Toolbar, and flake8.
-Runtime/production images install only `app/requirements.txt`; Debug Toolbar
-is enabled only when `DEBUG=1`. Rebuild the development image after changing
-dependencies, then run the local lint check with:
+Local development installs the locked `app/requirements-dev.txt`, which includes
+the runtime requirements, Debug Toolbar, and flake8. Runtime/production images
+install only the locked `app/requirements.txt`; Debug Toolbar is enabled only
+when `DEBUG=1`. Edit the corresponding `.in` files and regenerate both locks
+using Python 3.13 before changing dependencies:
+
+```sh
+cd app
+uv pip compile requirements.in --python 3.13 --universal -o requirements.txt
+uv pip compile requirements-dev.in --python 3.13 --universal -o requirements-dev.txt
+```
+
+Rebuild the development image after changing dependencies, then run the local
+lint check with:
 
 ```sh
 docker compose run --rm --no-deps --entrypoint flake8 poll .

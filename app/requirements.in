@@ -1,0 +1,10 @@
+Django>=6.1,<6.2
+markdown>=3.8,<4
+psycopg[binary]>=3.2,<4
+gunicorn>=23,<24
+pytz>=2025.2
+django-allauth>=65.18,<66
+praw>=8,<9
+requests>=2.32,<3
+Pillow>=12,<13
+cryptography>=41
