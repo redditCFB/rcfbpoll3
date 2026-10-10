@@ -83,7 +83,7 @@
                 </div>
             </div>
         </div>
-        <div class="table-responsive py-3">
+        <div class="table-responsive py-3 d-none d-md-block">
             <table class="table table-sm table-striped table-bordered" id="poll-results">
                 <tr>
                     <th class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Plus Difference From Baseline (If Applicable)">
@@ -152,27 +152,93 @@
                     </tr>
                 {% endfor %}
             </table>
-            {% if dropped and dropped.count > 0 %}
-                <p>
-                    <strong>Dropped:</strong>
-                    {% for rank in dropped %}
-                        #{{ rank.rank }}
-                        <a href="/poll/view/{{ this_poll.id }}/team/{{ rank.team.id }}/">
-                            {{ rank.team.short_name }}
-                        </a>{% if not forloop.last %},{% endif %}
-                    {% endfor %}
-                </p>
-            {% endif %}
+        </div>
+        <section class="poll-results-mobile d-md-none py-3" aria-label="Poll results">
+            {% for rank in top25 %}
+                <article class="poll-result-mobile-card">
+                    <div class="poll-result-mobile-heading">
+                        <div class="poll-result-mobile-rank">
+                            <strong>#{{ rank.rank }}</strong>
+                            {% if rank.baseline_diff > 0 %}
+                                <span class="text-success">({{ rank.baseline_diff_str }})</span>
+                            {% elif rank.baseline_diff < 0 %}
+                                <span class="text-danger">({{ rank.baseline_diff_str }})</span>
+                            {% endif %}
+                        </div>
+                        <div class="poll-result-mobile-team">
+                            <img class="team-logo" src="{% team_logo_url rank.team.handle %}" alt="">
+                            <a href="/poll/view/{{ this_poll.id }}/team/{{ rank.team.id }}/">
+                                {{ rank.team.name }}
+                            </a>
+                        </div>
+                    </div>
+                    <dl class="poll-result-mobile-stats">
+                        <div>
+                            <dt>Change</dt>
+                            {% if rank.rank_diff_str == 'NEW' %}
+                                <dd>NEW</dd>
+                            {% elif rank.rank_diff > 0 %}
+                                <dd class="text-success">{{ rank.rank_diff_str }}</dd>
+                            {% elif rank.rank_diff < 0 %}
+                                <dd class="text-danger">{{ rank.rank_diff_str }}</dd>
+                            {% else %}
+                                <dd>--</dd>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <dt>Points</dt>
+                            <dd>{{ rank.points }}</dd>
+                        </div>
+                        <div>
+                            <dt>PPV</dt>
+                            <dd>{{ rank.points_per_voter|floatformat:2 }}</dd>
+                        </div>
+                        <div>
+                            <dt>Δ PPV</dt>
+                            {% if rank.ppv_diff > 0 %}
+                                <dd class="text-success">+{{ rank.ppv_diff|floatformat:2 }}</dd>
+                            {% elif rank.ppv_diff < 0 %}
+                                <dd class="text-danger">{{ rank.ppv_diff|floatformat:2 }}</dd>
+                            {% else %}
+                                <dd>±{{ rank.ppv_diff|floatformat:2 }}</dd>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <dt>σ</dt>
+                            <dd>{{ rank.std_dev|floatformat:2 }}</dd>
+                        </div>
+                        <div>
+                            <dt># Votes</dt>
+                            <dd>{{ rank.votes }}</dd>
+                        </div>
+                        <div>
+                            <dt>#1 Votes</dt>
+                            <dd>{{ rank.first_place_votes }}</dd>
+                        </div>
+                    </dl>
+                </article>
+            {% endfor %}
+        </section>
+        {% if dropped and dropped.count > 0 %}
             <p>
-                <strong>Others Receiving Votes:</strong>
-                {% for rank in others %}
+                <strong>Dropped:</strong>
+                {% for rank in dropped %}
+                    #{{ rank.rank }}
                     <a href="/poll/view/{{ this_poll.id }}/team/{{ rank.team.id }}/">
                         {{ rank.team.short_name }}
-                    </a>
-                    {{ rank.points }}{% if not forloop.last %},{% endif %}
+                    </a>{% if not forloop.last %},{% endif %}
                 {% endfor %}
             </p>
-        </div>
+        {% endif %}
+        <p>
+            <strong>Others Receiving Votes:</strong>
+            {% for rank in others %}
+                <a href="/poll/view/{{ this_poll.id }}/team/{{ rank.team.id }}/">
+                    {{ rank.team.short_name }}
+                </a>
+                {{ rank.points }}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        </p>
     </div>
     <script>
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')

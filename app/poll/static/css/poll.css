@@ -107,6 +107,74 @@ body {
     min-width: 0;
 }
 
+.poll-results-mobile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+}
+
+.poll-result-mobile-card {
+    min-width: 0;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #fff;
+}
+
+.poll-result-mobile-heading {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.poll-result-mobile-rank,
+.poll-result-mobile-team {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.poll-result-mobile-rank {
+    white-space: nowrap;
+}
+
+.poll-result-mobile-team .team-logo {
+    flex: 0 0 auto;
+    margin-left: 0;
+}
+
+.poll-result-mobile-team a {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.poll-result-mobile-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem 0.5rem;
+    margin: 0.4rem 0 0;
+}
+
+.poll-result-mobile-stats > div {
+    min-width: 0;
+}
+
+.poll-result-mobile-stats dt {
+    color: #6c757d;
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+.poll-result-mobile-stats dd {
+    margin: 0;
+    font-weight: 600;
+}
+
 .poll-index-mobile-list {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
