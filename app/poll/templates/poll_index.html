@@ -6,37 +6,63 @@
         <h1>Poll Index</h1>
         {% for year in years %}
             <h3>{{ year }}</h3>
-            <table class="table table-striped" style="width: auto;">
-                <thead>
-                    <tr>
-                        <th>Week</th>
-                        <th>Published</th>
-                        <th>#1 Team</th>
-                        <th>Voters</th>
-                        <th>Ballots</th>
-                        <th>Analysis</th>
-                    <tr>
-                </thead>
-                <tbody>
-                    {% for poll in polls %}
-                        {% if poll.year == year %}
-                            <tr>
-                                <td><a href="/poll/view/{{ poll.id }}/">{{ poll.week }}</a></td>
+            <div class="table-responsive d-none d-md-block">
+                <table class="table table-striped" style="width: auto;">
+                    <thead>
+                        <tr>
+                            <th>Week</th>
+                            <th class="text-nowrap">Published</th>
+                            <th>#1 Team</th>
+                            <th>Voters</th>
+                            <th>Ballots</th>
+                            <th>Analysis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for poll in polls %}
+                            {% if poll.year == year %}
+                                <tr>
+                                    <td><a href="/poll/view/{{ poll.id }}/">{{ poll.week }}</a></td>
+                                    {% localtime on %}
+                                        <td class="text-nowrap">{{ poll.publish_date }}</td>
+                                    {% endlocaltime %}
+                                    <td>
+                                        <img class="team-logo" src="{% team_logo_url poll.top_team.handle %}" alt="">
+                                        {{ poll.top_team.short_name }}
+                                    </td>
+                                    <td><a href="/poll/voters/{{ poll.id }}/">Voters</a></td>
+                                    <td><a href="/poll/ballots/{{ poll.id }}/">Ballots</a></td>
+                                    <td><a href="/poll/analysis/{{ poll.id }}/">Analysis</a></td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="poll-index-mobile-list d-md-none">
+                {% for poll in polls %}
+                    {% if poll.year == year %}
+                        <article class="poll-index-mobile-card">
+                            <div class="poll-index-mobile-heading">
+                                <h4 class="poll-index-mobile-week"><a class="text-reset text-decoration-none" href="/poll/view/{{ poll.id }}/">{{ poll.week }}</a></h4>
                                 {% localtime on %}
-                                    <td>{{ poll.publish_date }}</td>
+                                    <time class="poll-index-mobile-published" datetime="{{ poll.publish_date|date:'c' }}">{{ poll.publish_date|date:"M j" }} · {{ poll.publish_date|time:"g:i a" }}</time>
                                 {% endlocaltime %}
-                                <td>
-                                    <img class="team-logo" src="{% team_logo_url poll.top_team.handle %}" alt="">
-                                    {{ poll.top_team.short_name }}
-                                </td>
-                                <td><a href="/poll/voters/{{ poll.id }}/">Voters</a></td>
-                                <td><a href="/poll/ballots/{{ poll.id }}/">Ballots</a></td>
-                                <td><a href="/poll/analysis/{{ poll.id }}/">Analysis</a></td>
-                            </tr>
-                        {% endif %}
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </div>
+                            <div class="poll-index-mobile-team">
+                                <span class="poll-index-mobile-label">#1 Team:</span>
+                                <img class="team-logo" src="{% team_logo_url poll.top_team.handle %}" alt="">
+                                <span class="poll-index-mobile-team-name">{{ poll.top_team.short_name }}</span>
+                            </div>
+                            <nav class="poll-index-mobile-actions" aria-label="{{ poll.week }} links">
+                                <a href="/poll/voters/{{ poll.id }}/">Voters</a>
+                                <a href="/poll/ballots/{{ poll.id }}/">Ballots</a>
+                                <a href="/poll/analysis/{{ poll.id }}/">Analysis</a>
+                            </nav>
+                        </article>
+                    {% endif %}
+                {% endfor %}
+            </div>
         {% endfor %}
     </div>
 {% endblock %}
