@@ -1,0 +1,6 @@
+<nav class="nav py-3 poll-section-nav" aria-label="Poll sections">
+    <a class="nav-link{% if active_section == 'results' %} disabled{% endif %}" href="/poll/view/{{ this_poll.id }}/"{% if active_section == 'results' %} aria-current="page"{% endif %}>Results</a>
+    <a class="nav-link{% if active_section == 'voters' %} disabled{% endif %}" href="/poll/voters/{{ this_poll.id }}/"{% if active_section == 'voters' %} aria-current="page"{% endif %}>Voters</a>
+    <a class="nav-link{% if active_section == 'ballots' %} disabled{% endif %}" href="/poll/ballots/{{ this_poll.id }}/1/"{% if active_section == 'ballots' %} aria-current="page"{% endif %}>Ballots</a>
+    <a class="nav-link{% if active_section == 'analysis' %} disabled{% endif %}" href="/poll/analysis/{{ this_poll.id }}/"{% if active_section == 'analysis' %} aria-current="page"{% endif %}>Analysis</a>
+</nav>
