@@ -239,7 +239,7 @@ class BallotAdmin(admin.ModelAdmin):
     inlines = [BallotEntryInline]
     readonly_fields = ('is_submitted',)
     list_display = ('poll', 'user', 'poll_type', 'is_submitted')
-    search_fields = ['poll', 'user']
+    search_fields = ['poll__year', 'poll__week', 'user__username']
     ordering = ['-poll', 'user']
 
 
