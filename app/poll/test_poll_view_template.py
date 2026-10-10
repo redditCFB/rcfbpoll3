@@ -5,14 +5,14 @@ from django.test import SimpleTestCase
 
 
 class PollViewTemplateTests(SimpleTestCase):
-    def test_mobile_results_show_all_table_values_in_labeled_cards(self):
+    def test_mobile_results_use_compact_table_with_secondary_stats_in_dropdown(self):
         team = SimpleNamespace(id=4, handle='test-team', name='Test Team')
         rank = SimpleNamespace(
             rank=1,
             baseline_diff=2,
             baseline_diff_str='+2',
-            rank_diff=0,
-            rank_diff_str='--',
+            rank_diff=1,
+            rank_diff_str='+1',
             team=team,
             points=100,
             points_per_voter=20,
@@ -45,16 +45,20 @@ class PollViewTemplateTests(SimpleTestCase):
 
         self.assertIn('class="table-responsive py-3 d-none d-md-block"', rendered)
         self.assertIn('class="poll-results-mobile d-md-none py-3"', rendered)
-        self.assertIn('poll-result-mobile-card', mobile_results)
-        for label in ('Change', 'Points', 'PPV', 'Δ PPV', 'σ', '# Votes', '#1 Votes'):
+        self.assertIn('class="table table-sm table-striped table-bordered poll-results-mobile-table"', mobile_results)
+        for label in ('Rank', 'Team', 'Change', 'Points', '#1'):
+            self.assertIn(f'scope="col">{label}</th>', mobile_results)
+        self.assertIn('aria-label="More stats for Test Team"', mobile_results)
+        self.assertIn('<td class="text-center text-success">+1</td>', mobile_results)
+        self.assertIn('<td class="text-center">100</td>', mobile_results)
+        self.assertIn('<td class="text-center">1</td>', mobile_results)
+        for label in ('Baseline change', 'PPV', 'Δ PPV', 'σ', '# Votes'):
             self.assertIn(f'<dt>{label}</dt>', mobile_results)
         for value in (
-            '<dd>--</dd>',
-            '<dd>100</dd>',
+            '<dd class="text-success">+2</dd>',
             '<dd>20.00</dd>',
             '<dd class="text-success">+0.50</dd>',
             '<dd>1.25</dd>',
             '<dd>5</dd>',
-            '<dd>1</dd>',
         ):
             self.assertIn(value, mobile_results)
