@@ -153,9 +153,11 @@ body {
 .poll-results-mobile-details > summary {
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
     gap: 0.3rem;
     cursor: pointer;
     list-style: none;
+    white-space: nowrap;
 }
 
 .poll-results-mobile-details > summary::-webkit-details-marker {
@@ -178,6 +180,7 @@ body {
     display: flex;
     flex: 1 1 auto;
     align-items: center;
+    flex-wrap: nowrap;
     gap: 0.3rem;
     min-width: 0;
     max-width: 100%;
@@ -185,11 +188,10 @@ body {
 
 .poll-results-mobile-team .team-logo {
     display: block;
-    flex: 0 0 25px;
-    width: 25px;
+    flex: 0 0 auto;
+    width: auto;
     height: 25px;
     margin-left: 0;
-    object-fit: contain;
 }
 
 .poll-results-mobile-team > a {
