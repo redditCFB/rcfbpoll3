@@ -24,9 +24,9 @@
                 <div id="collapseOne" class="accordion-collapse collapse{% if show_filters %} show{% endif %}" aria-labelledby="headingOne">
                     <div class="accordion-body">
                         <form action="" method="get">
-                            <div class="py-2 row">
-                                <div class="form-label col-auto">Voter Type:</div>
-                                <div class="col-auto">
+                            <div class="py-2 row poll-filter-row">
+                                <div class="form-label col-auto poll-filter-label">Voter Type:</div>
+                                <div class="col-auto poll-filter-options">
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="checkbox" id="mainCheckbox" name="main" {% if options.main %} checked {% endif %}>
                                         <label class="form-check-label" for="mainCheckbox">Voter</label>
@@ -37,9 +37,9 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="py-2 row">
-                                <div class="form-label col-auto">Ballot Type:</div>
-                                <div class="col-auto">
+                            <div class="py-2 row poll-filter-row">
+                                <div class="form-label col-auto poll-filter-label">Ballot Type:</div>
+                                <div class="col-auto poll-filter-options poll-filter-compact-options">
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="checkbox" id="humanCheckbox" name="human" {% if options.human %} checked {% endif %}>
                                         <label class="form-check-label" for="humanCheckbox">Human</label>
@@ -54,9 +54,9 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="py-2 row">
-                                <div class="form-label col-auto">Timing:</div>
-                                <div class="col-auto">
+                            <div class="py-2 row poll-filter-row">
+                                <div class="form-label col-auto poll-filter-label">Timing:</div>
+                                <div class="col-auto poll-filter-options poll-filter-compact-options">
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="checkbox" id="beforeCheckbox" name="before_ap" {% if options.before_ap %} checked {% endif %}>
                                         <label class="form-check-label" for="beforeCheckbox">Before the AP</label>

@@ -41,6 +41,12 @@ class PollViewTemplateTests(SimpleTestCase):
             'others': [],
             'user': user,
         })
+        filter_form = rendered.split('<form action="" method="get">', 1)[1].split('</form>', 1)[0]
+        self.assertEqual(filter_form.count('class="py-2 row poll-filter-row"'), 3)
+        self.assertEqual(filter_form.count('poll-filter-options'), 3)
+        for label in ('Voter Type:', 'Ballot Type:', 'Timing:'):
+            self.assertIn(f'poll-filter-label">{label}</div>', filter_form)
+
         mobile_results = rendered.split('<section class="poll-results-mobile', 1)[1].split('</section>', 1)[0]
 
         self.assertIn('class="table-responsive py-3 d-none d-md-block"', rendered)

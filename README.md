@@ -43,6 +43,12 @@ docker compose run --rm --no-deps --entrypoint flake8 poll .
 
 Flake8 is currently a local check and is not a CI gate.
 
+Run the Chromium-based browser regression for the results filters with:
+
+```sh
+docker compose run --rm browser-test
+```
+
 The fixture contains public poll content, usernames, and rationales. It omits
 authentication accounts, sessions, social-login data, admin logs, provisional
 applications, and derived result caches. It is a release asset rather than a

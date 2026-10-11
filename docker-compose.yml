@@ -50,5 +50,21 @@ services:
         condition: service_healthy
     restart: "no"
 
+  browser-test:
+    profiles: [test]
+    build:
+      context: ./app
+      dockerfile: Dockerfile.browser-test
+    command: python manage.py test poll.browser_tests.filter_layout
+    volumes:
+      - ./app/:/usr/src/app/
+    environment:
+      DEBUG: "0"
+    env_file:
+      - ./.env.dev
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   postgres_data:
