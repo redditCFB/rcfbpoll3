@@ -110,6 +110,108 @@ body {
     width: auto;
 }
 
+.team-rankings-table {
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 0;
+}
+
+.team-rankings-user-column {
+    width: 25%;
+}
+
+.team-rankings-rank-column {
+    width: 18%;
+}
+
+.team-rankings-reason-column {
+    width: 57%;
+}
+
+.team-rankings-table th,
+.team-rankings-table td {
+    overflow-wrap: anywhere;
+    vertical-align: top;
+}
+
+.team-rankings-table.table-striped > tbody.team-rankings-user-group--striped > tr > * {
+    --bs-table-accent-bg: var(--bs-table-striped-bg);
+}
+
+.team-rankings-table.table-striped > tbody.team-rankings-user-group--plain > tr > * {
+    --bs-table-accent-bg: transparent;
+}
+
+.team-rankings-rationale-toggle {
+    display: none;
+    align-items: flex-start;
+    gap: 0.35rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.5rem;
+    text-align: left;
+    vertical-align: top;
+    cursor: pointer;
+}
+
+.team-rankings-rationale-toggle::before {
+    flex: 0 0 0.75rem;
+    color: #6c757d;
+    content: "▸";
+    line-height: 1.5rem;
+    text-align: center;
+}
+
+.team-rankings-rationale-toggle[aria-expanded="true"]::before {
+    content: "▾";
+}
+
+.team-rankings-expanded-rationale {
+    display: none !important;
+}
+
+.team-rankings-table > tbody > .team-rankings-expanded-rationale > td {
+    padding: 0.5rem 0.75rem;
+}
+
+.team-rankings-rationale-content {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 767.98px) {
+    .team-rankings-user-column {
+        width: 52%;
+    }
+
+    .team-rankings-rank-column {
+        width: 14%;
+    }
+
+    .team-rankings-reason-column {
+        width: 34%;
+    }
+
+    .team-rankings-table > :not(caption) > * > * {
+        padding: 0.35rem 0.2rem;
+    }
+
+    .team-rankings-rationale-full {
+        display: none;
+    }
+
+    .team-rankings-rationale-toggle {
+        display: inline-flex;
+    }
+
+    .team-rankings-table > tbody > .team-rankings-expanded-rationale:not([hidden]) {
+        display: table-row !important;
+    }
+}
+
 .selector-logo {
     height: 40px;
     width: 60px;

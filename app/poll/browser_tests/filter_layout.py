@@ -5,7 +5,7 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.utils import timezone
 from playwright.sync_api import sync_playwright
 
-from poll.models import Poll
+from poll.models import Ballot, BallotEntry, Poll, Team, User, UserRole
 
 
 class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
@@ -58,6 +58,168 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                 metrics['options']['left'],
                 msg=f'{group_name} options no longer follow the heading on desktop',
             )
+
+    def test_team_rankings_tables_fit_phone_viewports(self):
+        team = Team.objects.create(
+            handle='layout-test-team',
+            name='Layout Test Team',
+            conference='Test',
+            division='Test',
+            use_for_ballot=False,
+            short_name='TEST',
+        )
+        for user_type in (UserRole.Role.VOTER, UserRole.Role.PROVISIONAL):
+            user = User.objects.create(username='voter-' + ('x' * 26))
+            ballot = Ballot.objects.create(
+                user=user,
+                poll=self.poll,
+                submission_date=timezone.now(),
+                poll_type=Ballot.BallotType.HUMAN,
+                user_type=user_type,
+            )
+            BallotEntry.objects.create(
+                ballot=ballot,
+                team=team,
+                rank=1,
+                rationale=(
+                    'A written rationale with a long unbroken word '
+                    + ('rationale' * 12)
+                    + ' and enough surrounding text to check normal wrapping.'
+                ),
+            )
+        empty_reason_user = User.objects.create(username='empty-rationale')
+        empty_reason_ballot = Ballot.objects.create(
+            user=empty_reason_user,
+            poll=self.poll,
+            submission_date=timezone.now(),
+            poll_type=Ballot.BallotType.HUMAN,
+            user_type=UserRole.Role.VOTER,
+        )
+        BallotEntry.objects.create(
+            ballot=empty_reason_ballot,
+            team=team,
+            rank=2,
+            rationale='',
+        )
+
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={'width': 320, 'height': 900}, device_scale_factor=1)
+            try:
+                page.route('**/*.js', lambda route: route.abort())
+                response = page.goto(
+                    f'{self.live_server_url}/poll/view/{self.poll.id}/team/{team.id}/',
+                    wait_until='domcontentloaded',
+                )
+                self.assertEqual(response.status, 200)
+
+                first_table = page.locator('.team-rankings-table').first
+                self.assertEqual(first_table.locator('thead th').all_inner_texts(), ['User', 'Rank', 'Rationale'])
+                self.assertNotIn('No reason submitted', page.locator('body').inner_text())
+                voter_rows = first_table.locator('tbody > tr:not(.team-rankings-expanded-rationale)')
+                empty_reason_row = voter_rows.nth(1)
+                self.assertEqual(empty_reason_row.locator('td').nth(2).inner_text().strip(), '')
+                self.assertEqual(empty_reason_row.locator('.team-rankings-rationale-toggle').count(), 0)
+
+                first_row = voter_rows.first
+                toggle = first_row.locator('.team-rankings-rationale-toggle')
+                reason_id = toggle.get_attribute('aria-controls')
+                rationale_row = page.locator(f'#{reason_id}')
+                reason = rationale_row.locator('.team-rankings-rationale-content')
+                self.assertFalse(reason.is_visible())
+                self.assertEqual(toggle.inner_text(), 'Rationale')
+                self.assertEqual(toggle.get_attribute('aria-expanded'), 'false')
+                alignment = first_row.evaluate(
+                    """row => {
+                        const user = row.cells[0].querySelector('a').getBoundingClientRect();
+                        const toggle = row.querySelector('.team-rankings-rationale-toggle').getBoundingClientRect();
+                        const rankRange = document.createRange();
+                        rankRange.selectNodeContents(row.cells[1]);
+                        const rank = rankRange.getBoundingClientRect();
+                        return {userTop: user.top, toggleTop: toggle.top, rankTop: rank.top};
+                    }"""
+                )
+                self.assertLessEqual(abs(alignment['toggleTop'] - alignment['userTop']), 3)
+                self.assertLessEqual(abs(alignment['toggleTop'] - alignment['rankTop']), 3)
+                toggle.click()
+                self.assertTrue(reason.is_visible())
+                self.assertEqual(toggle.get_attribute('aria-expanded'), 'true')
+                block_backgrounds = rationale_row.evaluate(
+                    """row => {
+                        const block = row.closest('tbody');
+                        const nextBlock = block.nextElementSibling;
+                        const accent = cell => getComputedStyle(cell).getPropertyValue('--bs-table-accent-bg').trim();
+                        return {
+                            voter: accent(block.rows[0].cells[0]),
+                            rationale: accent(row.cells[0]),
+                            nextVoter: accent(nextBlock.rows[0].cells[0]),
+                        };
+                    }"""
+                )
+                self.assertEqual(block_backgrounds['voter'], block_backgrounds['rationale'])
+                self.assertNotEqual(block_backgrounds['voter'], block_backgrounds['nextVoter'])
+                expanded_metrics = rationale_row.evaluate(
+                    """row => {
+                        const cell = row.cells[0].getBoundingClientRect();
+                        const table = row.closest('table').getBoundingClientRect();
+                        const rationale = row.querySelector('.team-rankings-rationale-content').getBoundingClientRect();
+                        return {colspan: row.cells[0].colSpan, cellLeft: cell.left, cellRight: cell.right,
+                            tableLeft: table.left, tableRight: table.right,
+                            rationaleLeft: rationale.left, rationaleRight: rationale.right};
+                    }"""
+                )
+                self.assertEqual(expanded_metrics['colspan'], 3)
+                self.assertAlmostEqual(expanded_metrics['cellLeft'], expanded_metrics['tableLeft'], delta=1)
+                self.assertAlmostEqual(expanded_metrics['cellRight'], expanded_metrics['tableRight'], delta=1)
+                self.assertGreater(expanded_metrics['rationaleRight'] - expanded_metrics['rationaleLeft'], 0.85 * (
+                    expanded_metrics['tableRight'] - expanded_metrics['tableLeft']
+                ))
+                self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'), 320)
+                toggle.click()
+                self.assertFalse(reason.is_visible())
+                self.assertEqual(toggle.get_attribute('aria-expanded'), 'false')
+
+                for width in (320, 360, 390, 430, 768, 1024, 1440):
+                    page.set_viewport_size({'width': width, 'height': 900})
+                    metrics = page.evaluate(
+                        """() => {
+                            const container = document.querySelector('.container').getBoundingClientRect();
+                            return {
+                                viewport: document.documentElement.clientWidth,
+                                document: document.documentElement.scrollWidth,
+                                tables: Array.from(document.querySelectorAll('.team-rankings-table')).map(table => {
+                                    const box = table.getBoundingClientRect();
+                                    return {left: box.left, right: box.right, width: box.width,
+                                        display: getComputedStyle(table).display};
+                                }),
+                                container: {left: container.left, right: container.right},
+                            };
+                        }"""
+                    )
+                    self.assertEqual(len(metrics['tables']), 2)
+                    self.assertLessEqual(
+                        metrics['document'],
+                        width,
+                        msg=f'Document overflows at {width}px: {metrics}',
+                    )
+                    self.assertTrue(all(table['display'] == 'table' for table in metrics['tables']))
+                    for table in metrics['tables']:
+                        self.assertGreaterEqual(table['left'], metrics['container']['left'] - 1)
+                        self.assertLessEqual(
+                            table['right'],
+                            metrics['container']['right'] + 1,
+                            msg=f'Team rankings table exceeds its container at {width}px: {metrics}',
+                        )
+                    rationale_toggle = page.locator('.team-rankings-table').first.locator(
+                        '.team-rankings-rationale-toggle'
+                    ).first
+                    rationale_full = page.locator('.team-rankings-table').first.locator(
+                        '.team-rankings-rationale-full'
+                    ).first
+                    self.assertEqual(rationale_toggle.is_visible(), width < 768)
+                    self.assertEqual(rationale_full.is_visible(), width >= 768)
+            finally:
+                browser.close()
 
     def _read_positions(self):
         result = {'mobile': {}, 'desktop': {}}
