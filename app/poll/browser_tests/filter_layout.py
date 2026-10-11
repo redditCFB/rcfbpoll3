@@ -144,6 +144,20 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                 toggle.click()
                 self.assertTrue(reason.is_visible())
                 self.assertEqual(toggle.get_attribute('aria-expanded'), 'true')
+                block_backgrounds = rationale_row.evaluate(
+                    """row => {
+                        const block = row.closest('tbody');
+                        const nextBlock = block.nextElementSibling;
+                        const accent = cell => getComputedStyle(cell).getPropertyValue('--bs-table-accent-bg').trim();
+                        return {
+                            voter: accent(block.rows[0].cells[0]),
+                            rationale: accent(row.cells[0]),
+                            nextVoter: accent(nextBlock.rows[0].cells[0]),
+                        };
+                    }"""
+                )
+                self.assertEqual(block_backgrounds['voter'], block_backgrounds['rationale'])
+                self.assertNotEqual(block_backgrounds['voter'], block_backgrounds['nextVoter'])
                 expanded_metrics = rationale_row.evaluate(
                     """row => {
                         const cell = row.cells[0].getBoundingClientRect();

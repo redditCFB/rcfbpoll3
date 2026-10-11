@@ -134,6 +134,14 @@ body {
     vertical-align: top;
 }
 
+.team-rankings-table.table-striped > tbody.team-rankings-user-group--striped > tr > * {
+    --bs-table-accent-bg: var(--bs-table-striped-bg);
+}
+
+.team-rankings-table.table-striped > tbody.team-rankings-user-group--plain > tr > * {
+    --bs-table-accent-bg: transparent;
+}
+
 .team-rankings-rationale-toggle {
     display: none;
     align-items: flex-start;
@@ -168,7 +176,6 @@ body {
 
 .team-rankings-table > tbody > .team-rankings-expanded-rationale > td {
     padding: 0.5rem 0.75rem;
-    background-color: #f8f9fa;
 }
 
 .team-rankings-rationale-content {

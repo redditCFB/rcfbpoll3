@@ -58,9 +58,10 @@
                         <th scope="col">Rationale</th>
                     </tr>
                 </thead>
-                <tbody>
                 {% for entry in entries %}
                     {% if entry.ballot.user_type == 1 %}
+                        {% cycle 'team-rankings-user-group--striped' 'team-rankings-user-group--plain' as row_style silent %}
+                        <tbody class="team-rankings-user-group {{ row_style }}">
                         <tr>
                             <td>
                                 <a class="{% if entry.ballot.poll_type == 1 %}text-primary{% elif entry.ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if entry.ballot.submission_date < entry.ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ entry.ballot.id }}/">
@@ -80,9 +81,9 @@
                                 <td colspan="3"><div class="team-rankings-rationale-content">{{ entry.rationale|linebreaksbr }}</div></td>
                             </tr>
                         {% endif %}
+                        </tbody>
                     {% endif %}
                 {% endfor %}
-                </tbody>
             </table>
         </div>
         <div class="py-2">
@@ -104,9 +105,10 @@
                         <th scope="col">Rationale</th>
                     </tr>
                 </thead>
-                <tbody>
                 {% for entry in entries %}
                     {% if entry.ballot.user_type == 2 %}
+                        {% cycle 'team-rankings-user-group--striped' 'team-rankings-user-group--plain' as row_style silent %}
+                        <tbody class="team-rankings-user-group {{ row_style }}">
                         <tr>
                             <td>
                                 <a class="{% if entry.ballot.poll_type == 1 %}text-primary{% elif entry.ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if entry.ballot.submission_date < entry.ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ entry.ballot.id }}/">
@@ -126,9 +128,9 @@
                                 <td colspan="3"><div class="team-rankings-rationale-content">{{ entry.rationale|linebreaksbr }}</div></td>
                             </tr>
                         {% endif %}
+                        </tbody>
                     {% endif %}
                 {% endfor %}
-                </tbody>
             </table>
         </div>
         <div class="py-2">
