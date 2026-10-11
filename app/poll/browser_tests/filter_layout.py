@@ -5,7 +5,7 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.utils import timezone
 from playwright.sync_api import sync_playwright
 
-from poll.models import Poll
+from poll.models import Ballot, BallotEntry, Poll, Team, User, UserRole
 
 
 class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
@@ -58,6 +58,78 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                 metrics['options']['left'],
                 msg=f'{group_name} options no longer follow the heading on desktop',
             )
+
+    def test_team_rankings_tables_fit_phone_viewports(self):
+        team = Team.objects.create(
+            handle='layout-test-team',
+            name='Layout Test Team',
+            conference='Test',
+            division='Test',
+            use_for_ballot=False,
+            short_name='TEST',
+        )
+        for user_type in (UserRole.Role.VOTER, UserRole.Role.PROVISIONAL):
+            user = User.objects.create(username='voter-' + ('x' * 26))
+            ballot = Ballot.objects.create(
+                user=user,
+                poll=self.poll,
+                submission_date=timezone.now(),
+                poll_type=Ballot.BallotType.HUMAN,
+                user_type=user_type,
+            )
+            BallotEntry.objects.create(
+                ballot=ballot,
+                team=team,
+                rank=1,
+                rationale=(
+                    'A written rationale with a long unbroken word '
+                    + ('rationale' * 12)
+                    + ' and enough surrounding text to check normal wrapping.'
+                ),
+            )
+
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={'width': 320, 'height': 900}, device_scale_factor=1)
+            try:
+                page.route('**/*.js', lambda route: route.abort())
+                response = page.goto(
+                    f'{self.live_server_url}/poll/view/{self.poll.id}/team/{team.id}/',
+                    wait_until='domcontentloaded',
+                )
+                self.assertEqual(response.status, 200)
+
+                for width in (320, 360, 390, 430, 768, 1024, 1440):
+                    page.set_viewport_size({'width': width, 'height': 900})
+                    metrics = page.evaluate(
+                        """() => {
+                            const container = document.querySelector('.container').getBoundingClientRect();
+                            return {
+                                viewport: document.documentElement.clientWidth,
+                                document: document.documentElement.scrollWidth,
+                                tables: Array.from(document.querySelectorAll('.team-rankings-table')).map(table => {
+                                    const box = table.getBoundingClientRect();
+                                    return {left: box.left, right: box.right, width: box.width};
+                                }),
+                                container: {left: container.left, right: container.right},
+                            };
+                        }"""
+                    )
+                    self.assertEqual(len(metrics['tables']), 2)
+                    self.assertLessEqual(
+                        metrics['document'],
+                        width,
+                        msg=f'Document overflows at {width}px: {metrics}',
+                    )
+                    for table in metrics['tables']:
+                        self.assertGreaterEqual(table['left'], metrics['container']['left'] - 1)
+                        self.assertLessEqual(
+                            table['right'],
+                            metrics['container']['right'] + 1,
+                            msg=f'Team rankings table exceeds its container at {width}px: {metrics}',
+                        )
+            finally:
+                browser.close()
 
     def _read_positions(self):
         result = {'mobile': {}, 'desktop': {}}

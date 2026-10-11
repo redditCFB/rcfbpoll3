@@ -110,6 +110,29 @@ body {
     width: auto;
 }
 
+.team-rankings-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.team-rankings-user-column {
+    width: 25%;
+}
+
+.team-rankings-rank-column {
+    width: 18%;
+}
+
+.team-rankings-reason-column {
+    width: 57%;
+}
+
+.team-rankings-table th,
+.team-rankings-table td {
+    overflow-wrap: anywhere;
+    vertical-align: top;
+}
+
 .selector-logo {
     height: 40px;
     width: 60px;
