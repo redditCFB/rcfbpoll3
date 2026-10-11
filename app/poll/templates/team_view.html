@@ -45,7 +45,7 @@
             </h4>
         </div>
         <div class="py-2">
-            <table class="table table-striped team-rankings-table">
+            <table class="table table-striped team-rankings-table d-none d-md-table">
                 <colgroup>
                     <col class="team-rankings-user-column">
                     <col class="team-rankings-rank-column">
@@ -70,6 +70,28 @@
                     {% endif %}
                 {% endfor %}
             </table>
+            <section class="team-rankings-mobile d-md-none" aria-label="Main poll voter rankings">
+                {% for entry in entries %}
+                    {% if entry.ballot.user_type == 1 %}
+                        <article class="team-rankings-card">
+                            <div class="team-rankings-card-heading">
+                                <a class="team-rankings-card-user {% if entry.ballot.poll_type == 1 %}text-primary{% elif entry.ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if entry.ballot.submission_date < entry.ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ entry.ballot.id }}/">
+                                    {{ entry.ballot.user.username }}
+                                </a>
+                                <span class="team-rankings-card-rank">Rank {{ entry.rank }}</span>
+                            </div>
+                            {% if entry.rationale %}
+                                <details class="team-rankings-card-disclosure">
+                                    <summary><span class="team-rankings-show-reason">Show reason</span><span class="team-rankings-hide-reason">Hide reason</span></summary>
+                                    <div class="team-rankings-card-rationale">{{ entry.rationale|linebreaksbr }}</div>
+                                </details>
+                            {% else %}
+                                <p class="team-rankings-card-empty-reason">No reason submitted</p>
+                            {% endif %}
+                        </article>
+                    {% endif %}
+                {% endfor %}
+            </section>
         </div>
         <div class="py-2">
             <h4>
@@ -77,7 +99,7 @@
             </h4>
         </div>
         <div class="py-2">
-            <table class="table table-striped team-rankings-table">
+            <table class="table table-striped team-rankings-table d-none d-md-table">
                 <colgroup>
                     <col class="team-rankings-user-column">
                     <col class="team-rankings-rank-column">
@@ -102,6 +124,28 @@
                     {% endif %}
                 {% endfor %}
             </table>
+            <section class="team-rankings-mobile d-md-none" aria-label="Provisional poll voter rankings">
+                {% for entry in entries %}
+                    {% if entry.ballot.user_type == 2 %}
+                        <article class="team-rankings-card">
+                            <div class="team-rankings-card-heading">
+                                <a class="team-rankings-card-user {% if entry.ballot.poll_type == 1 %}text-primary{% elif entry.ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if entry.ballot.submission_date < entry.ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ entry.ballot.id }}/">
+                                    {{ entry.ballot.user.username }}
+                                </a>
+                                <span class="team-rankings-card-rank">Rank {{ entry.rank }}</span>
+                            </div>
+                            {% if entry.rationale %}
+                                <details class="team-rankings-card-disclosure">
+                                    <summary><span class="team-rankings-show-reason">Show reason</span><span class="team-rankings-hide-reason">Hide reason</span></summary>
+                                    <div class="team-rankings-card-rationale">{{ entry.rationale|linebreaksbr }}</div>
+                                </details>
+                            {% else %}
+                                <p class="team-rankings-card-empty-reason">No reason submitted</p>
+                            {% endif %}
+                        </article>
+                    {% endif %}
+                {% endfor %}
+            </section>
         </div>
         <div class="py-2">
             <span class="text-primary">Blue</span> = Human<br>

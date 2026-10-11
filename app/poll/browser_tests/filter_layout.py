@@ -99,6 +99,27 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                 )
                 self.assertEqual(response.status, 200)
 
+                first_card = page.locator('.team-rankings-mobile').first.locator('.team-rankings-card').first
+                reason = first_card.locator('.team-rankings-card-rationale')
+                self.assertFalse(reason.is_visible())
+                self.assertEqual(first_card.locator('details summary').inner_text(), 'Show reason')
+                first_card.locator('details summary').click()
+                self.assertTrue(reason.is_visible())
+                expanded_metrics = first_card.evaluate(
+                    """card => {
+                        const heading = card.querySelector('.team-rankings-card-heading').getBoundingClientRect();
+                        const rationale = card.querySelector('.team-rankings-card-rationale').getBoundingClientRect();
+                        const box = card.getBoundingClientRect();
+                        return {headingBottom: heading.bottom, rationaleTop: rationale.top, cardRight: box.right,
+                            rationaleRight: rationale.right};
+                    }"""
+                )
+                self.assertGreaterEqual(expanded_metrics['rationaleTop'], expanded_metrics['headingBottom'])
+                self.assertLessEqual(expanded_metrics['rationaleRight'], expanded_metrics['cardRight'])
+                self.assertEqual(first_card.locator('details summary').inner_text(), 'Hide reason')
+                first_card.locator('details summary').click()
+                self.assertFalse(reason.is_visible())
+
                 for width in (320, 360, 390, 430, 768, 1024, 1440):
                     page.set_viewport_size({'width': width, 'height': 900})
                     metrics = page.evaluate(
@@ -109,7 +130,12 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                                 document: document.documentElement.scrollWidth,
                                 tables: Array.from(document.querySelectorAll('.team-rankings-table')).map(table => {
                                     const box = table.getBoundingClientRect();
-                                    return {left: box.left, right: box.right, width: box.width};
+                                    return {left: box.left, right: box.right, width: box.width,
+                                        display: getComputedStyle(table).display};
+                                }),
+                                cards: Array.from(document.querySelectorAll('.team-rankings-mobile')).map(section => {
+                                    const box = section.getBoundingClientRect();
+                                    return {left: box.left, right: box.right, display: getComputedStyle(section).display};
                                 }),
                                 container: {left: container.left, right: container.right},
                             };
@@ -121,13 +147,27 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                         width,
                         msg=f'Document overflows at {width}px: {metrics}',
                     )
-                    for table in metrics['tables']:
-                        self.assertGreaterEqual(table['left'], metrics['container']['left'] - 1)
-                        self.assertLessEqual(
-                            table['right'],
-                            metrics['container']['right'] + 1,
-                            msg=f'Team rankings table exceeds its container at {width}px: {metrics}',
-                        )
+                    if width < 768:
+                        self.assertTrue(all(table['display'] == 'none' for table in metrics['tables']))
+                        self.assertTrue(all(card['display'] != 'none' for card in metrics['cards']))
+                        self.assertEqual(page.locator('.team-rankings-card').count(), 2)
+                        for card in metrics['cards']:
+                            self.assertGreaterEqual(card['left'], metrics['container']['left'] - 1)
+                            self.assertLessEqual(
+                                card['right'],
+                                metrics['container']['right'] + 1,
+                                msg=f'Team ranking cards exceed their container at {width}px: {metrics}',
+                            )
+                    else:
+                        self.assertTrue(all(table['display'] != 'none' for table in metrics['tables']))
+                        self.assertTrue(all(card['display'] == 'none' for card in metrics['cards']))
+                        for table in metrics['tables']:
+                            self.assertGreaterEqual(table['left'], metrics['container']['left'] - 1)
+                            self.assertLessEqual(
+                                table['right'],
+                                metrics['container']['right'] + 1,
+                                msg=f'Team rankings table exceeds its container at {width}px: {metrics}',
+                            )
             finally:
                 browser.close()
 

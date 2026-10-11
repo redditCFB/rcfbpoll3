@@ -133,6 +133,82 @@ body {
     vertical-align: top;
 }
 
+.team-rankings-card {
+    margin-bottom: 0.5rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #fff;
+}
+
+.team-rankings-card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.team-rankings-card-user {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.team-rankings-card-rank {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.team-rankings-card-disclosure {
+    margin-top: 0.35rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.team-rankings-card-disclosure > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.25rem;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 600;
+}
+
+.team-rankings-card-disclosure > summary::-webkit-details-marker {
+    display: none;
+}
+
+.team-rankings-card-disclosure > summary::before {
+    flex: 0 0 0.75rem;
+    color: #6c757d;
+    content: "▸";
+    line-height: 1;
+    text-align: center;
+}
+
+.team-rankings-card-disclosure[open] > summary::before {
+    content: "▾";
+}
+
+.team-rankings-hide-reason,
+.team-rankings-card-disclosure[open] .team-rankings-show-reason {
+    display: none;
+}
+
+.team-rankings-card-disclosure[open] .team-rankings-hide-reason {
+    display: inline;
+}
+
+.team-rankings-card-rationale {
+    padding: 0 0.1rem 0.35rem 1.15rem;
+    overflow-wrap: anywhere;
+}
+
+.team-rankings-card-empty-reason {
+    margin: 0.35rem 0 0;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
 .selector-logo {
     height: 40px;
     width: 60px;
