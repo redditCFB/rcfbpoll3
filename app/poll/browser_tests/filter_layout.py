@@ -87,6 +87,20 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                     + ' and enough surrounding text to check normal wrapping.'
                 ),
             )
+        empty_reason_user = User.objects.create(username='empty-rationale')
+        empty_reason_ballot = Ballot.objects.create(
+            user=empty_reason_user,
+            poll=self.poll,
+            submission_date=timezone.now(),
+            poll_type=Ballot.BallotType.HUMAN,
+            user_type=UserRole.Role.VOTER,
+        )
+        BallotEntry.objects.create(
+            ballot=empty_reason_ballot,
+            team=team,
+            rank=2,
+            rationale='',
+        )
 
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch()
@@ -99,25 +113,35 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                 )
                 self.assertEqual(response.status, 200)
 
-                first_card = page.locator('.team-rankings-mobile').first.locator('.team-rankings-card').first
-                reason = first_card.locator('.team-rankings-card-rationale')
+                first_table = page.locator('.team-rankings-table').first
+                self.assertEqual(first_table.locator('thead th').all_inner_texts(), ['User', 'Rank', 'Rationale'])
+                self.assertNotIn('No reason submitted', page.locator('body').inner_text())
+                empty_reason_row = first_table.locator('tbody tr').nth(1)
+                self.assertEqual(empty_reason_row.locator('td').nth(2).inner_text().strip(), '')
+                self.assertEqual(empty_reason_row.locator('.team-rankings-rationale-disclosure').count(), 0)
+
+                first_row = first_table.locator('tbody tr').first
+                disclosure = first_row.locator('.team-rankings-rationale-disclosure')
+                reason = disclosure.locator('.team-rankings-rationale-content')
                 self.assertFalse(reason.is_visible())
-                self.assertEqual(first_card.locator('details summary').inner_text(), 'Show reason')
-                first_card.locator('details summary').click()
+                self.assertEqual(disclosure.locator('summary').inner_text(), 'Rationale')
+                row_height_before = first_row.evaluate('row => row.getBoundingClientRect().height')
+                disclosure.locator('summary').click()
                 self.assertTrue(reason.is_visible())
-                expanded_metrics = first_card.evaluate(
-                    """card => {
-                        const heading = card.querySelector('.team-rankings-card-heading').getBoundingClientRect();
-                        const rationale = card.querySelector('.team-rankings-card-rationale').getBoundingClientRect();
-                        const box = card.getBoundingClientRect();
-                        return {headingBottom: heading.bottom, rationaleTop: rationale.top, cardRight: box.right,
-                            rationaleRight: rationale.right};
+                expanded_metrics = disclosure.evaluate(
+                    """details => {
+                        const summary = details.querySelector('summary').getBoundingClientRect();
+                        const rationale = details.querySelector('.team-rankings-rationale-content').getBoundingClientRect();
+                        const cell = details.closest('td').getBoundingClientRect();
+                        const row = details.closest('tr').getBoundingClientRect();
+                        return {summaryBottom: summary.bottom, rationaleTop: rationale.top, cellRight: cell.right,
+                            rationaleRight: rationale.right, rowHeight: row.height};
                     }"""
                 )
-                self.assertGreaterEqual(expanded_metrics['rationaleTop'], expanded_metrics['headingBottom'])
-                self.assertLessEqual(expanded_metrics['rationaleRight'], expanded_metrics['cardRight'])
-                self.assertEqual(first_card.locator('details summary').inner_text(), 'Hide reason')
-                first_card.locator('details summary').click()
+                self.assertGreaterEqual(expanded_metrics['rationaleTop'], expanded_metrics['summaryBottom'])
+                self.assertLessEqual(expanded_metrics['rationaleRight'], expanded_metrics['cellRight'])
+                self.assertGreater(expanded_metrics['rowHeight'], row_height_before)
+                disclosure.locator('summary').click()
                 self.assertFalse(reason.is_visible())
 
                 for width in (320, 360, 390, 430, 768, 1024, 1440):
@@ -133,10 +157,6 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                                     return {left: box.left, right: box.right, width: box.width,
                                         display: getComputedStyle(table).display};
                                 }),
-                                cards: Array.from(document.querySelectorAll('.team-rankings-mobile')).map(section => {
-                                    const box = section.getBoundingClientRect();
-                                    return {left: box.left, right: box.right, display: getComputedStyle(section).display};
-                                }),
                                 container: {left: container.left, right: container.right},
                             };
                         }"""
@@ -147,27 +167,22 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                         width,
                         msg=f'Document overflows at {width}px: {metrics}',
                     )
-                    if width < 768:
-                        self.assertTrue(all(table['display'] == 'none' for table in metrics['tables']))
-                        self.assertTrue(all(card['display'] != 'none' for card in metrics['cards']))
-                        self.assertEqual(page.locator('.team-rankings-card').count(), 2)
-                        for card in metrics['cards']:
-                            self.assertGreaterEqual(card['left'], metrics['container']['left'] - 1)
-                            self.assertLessEqual(
-                                card['right'],
-                                metrics['container']['right'] + 1,
-                                msg=f'Team ranking cards exceed their container at {width}px: {metrics}',
-                            )
-                    else:
-                        self.assertTrue(all(table['display'] != 'none' for table in metrics['tables']))
-                        self.assertTrue(all(card['display'] == 'none' for card in metrics['cards']))
-                        for table in metrics['tables']:
-                            self.assertGreaterEqual(table['left'], metrics['container']['left'] - 1)
-                            self.assertLessEqual(
-                                table['right'],
-                                metrics['container']['right'] + 1,
-                                msg=f'Team rankings table exceeds its container at {width}px: {metrics}',
-                            )
+                    self.assertTrue(all(table['display'] == 'table' for table in metrics['tables']))
+                    for table in metrics['tables']:
+                        self.assertGreaterEqual(table['left'], metrics['container']['left'] - 1)
+                        self.assertLessEqual(
+                            table['right'],
+                            metrics['container']['right'] + 1,
+                            msg=f'Team rankings table exceeds its container at {width}px: {metrics}',
+                        )
+                    rationale_disclosure = page.locator('.team-rankings-table').first.locator(
+                        '.team-rankings-rationale-disclosure'
+                    ).first
+                    rationale_full = page.locator('.team-rankings-table').first.locator(
+                        '.team-rankings-rationale-full'
+                    ).first
+                    self.assertEqual(rationale_disclosure.is_visible(), width < 768)
+                    self.assertEqual(rationale_full.is_visible(), width >= 768)
             finally:
                 browser.close()
 
