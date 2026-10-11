@@ -116,33 +116,54 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                 first_table = page.locator('.team-rankings-table').first
                 self.assertEqual(first_table.locator('thead th').all_inner_texts(), ['User', 'Rank', 'Rationale'])
                 self.assertNotIn('No reason submitted', page.locator('body').inner_text())
-                empty_reason_row = first_table.locator('tbody tr').nth(1)
+                voter_rows = first_table.locator('tbody > tr:not(.team-rankings-expanded-rationale)')
+                empty_reason_row = voter_rows.nth(1)
                 self.assertEqual(empty_reason_row.locator('td').nth(2).inner_text().strip(), '')
-                self.assertEqual(empty_reason_row.locator('.team-rankings-rationale-disclosure').count(), 0)
+                self.assertEqual(empty_reason_row.locator('.team-rankings-rationale-toggle').count(), 0)
 
-                first_row = first_table.locator('tbody tr').first
-                disclosure = first_row.locator('.team-rankings-rationale-disclosure')
-                reason = disclosure.locator('.team-rankings-rationale-content')
+                first_row = voter_rows.first
+                toggle = first_row.locator('.team-rankings-rationale-toggle')
+                reason_id = toggle.get_attribute('aria-controls')
+                rationale_row = page.locator(f'#{reason_id}')
+                reason = rationale_row.locator('.team-rankings-rationale-content')
                 self.assertFalse(reason.is_visible())
-                self.assertEqual(disclosure.locator('summary').inner_text(), 'Rationale')
-                row_height_before = first_row.evaluate('row => row.getBoundingClientRect().height')
-                disclosure.locator('summary').click()
-                self.assertTrue(reason.is_visible())
-                expanded_metrics = disclosure.evaluate(
-                    """details => {
-                        const summary = details.querySelector('summary').getBoundingClientRect();
-                        const rationale = details.querySelector('.team-rankings-rationale-content').getBoundingClientRect();
-                        const cell = details.closest('td').getBoundingClientRect();
-                        const row = details.closest('tr').getBoundingClientRect();
-                        return {summaryBottom: summary.bottom, rationaleTop: rationale.top, cellRight: cell.right,
-                            rationaleRight: rationale.right, rowHeight: row.height};
+                self.assertEqual(toggle.inner_text(), 'Rationale')
+                self.assertEqual(toggle.get_attribute('aria-expanded'), 'false')
+                alignment = first_row.evaluate(
+                    """row => {
+                        const user = row.cells[0].querySelector('a').getBoundingClientRect();
+                        const toggle = row.querySelector('.team-rankings-rationale-toggle').getBoundingClientRect();
+                        const rankRange = document.createRange();
+                        rankRange.selectNodeContents(row.cells[1]);
+                        const rank = rankRange.getBoundingClientRect();
+                        return {userTop: user.top, toggleTop: toggle.top, rankTop: rank.top};
                     }"""
                 )
-                self.assertGreaterEqual(expanded_metrics['rationaleTop'], expanded_metrics['summaryBottom'])
-                self.assertLessEqual(expanded_metrics['rationaleRight'], expanded_metrics['cellRight'])
-                self.assertGreater(expanded_metrics['rowHeight'], row_height_before)
-                disclosure.locator('summary').click()
+                self.assertLessEqual(abs(alignment['toggleTop'] - alignment['userTop']), 3)
+                self.assertLessEqual(abs(alignment['toggleTop'] - alignment['rankTop']), 3)
+                toggle.click()
+                self.assertTrue(reason.is_visible())
+                self.assertEqual(toggle.get_attribute('aria-expanded'), 'true')
+                expanded_metrics = rationale_row.evaluate(
+                    """row => {
+                        const cell = row.cells[0].getBoundingClientRect();
+                        const table = row.closest('table').getBoundingClientRect();
+                        const rationale = row.querySelector('.team-rankings-rationale-content').getBoundingClientRect();
+                        return {colspan: row.cells[0].colSpan, cellLeft: cell.left, cellRight: cell.right,
+                            tableLeft: table.left, tableRight: table.right,
+                            rationaleLeft: rationale.left, rationaleRight: rationale.right};
+                    }"""
+                )
+                self.assertEqual(expanded_metrics['colspan'], 3)
+                self.assertAlmostEqual(expanded_metrics['cellLeft'], expanded_metrics['tableLeft'], delta=1)
+                self.assertAlmostEqual(expanded_metrics['cellRight'], expanded_metrics['tableRight'], delta=1)
+                self.assertGreater(expanded_metrics['rationaleRight'] - expanded_metrics['rationaleLeft'], 0.85 * (
+                    expanded_metrics['tableRight'] - expanded_metrics['tableLeft']
+                ))
+                self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'), 320)
+                toggle.click()
                 self.assertFalse(reason.is_visible())
+                self.assertEqual(toggle.get_attribute('aria-expanded'), 'false')
 
                 for width in (320, 360, 390, 430, 768, 1024, 1440):
                     page.set_viewport_size({'width': width, 'height': 900})
@@ -175,13 +196,13 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                             metrics['container']['right'] + 1,
                             msg=f'Team rankings table exceeds its container at {width}px: {metrics}',
                         )
-                    rationale_disclosure = page.locator('.team-rankings-table').first.locator(
-                        '.team-rankings-rationale-disclosure'
+                    rationale_toggle = page.locator('.team-rankings-table').first.locator(
+                        '.team-rankings-rationale-toggle'
                     ).first
                     rationale_full = page.locator('.team-rankings-table').first.locator(
                         '.team-rankings-rationale-full'
                     ).first
-                    self.assertEqual(rationale_disclosure.is_visible(), width < 768)
+                    self.assertEqual(rationale_toggle.is_visible(), width < 768)
                     self.assertEqual(rationale_full.is_visible(), width >= 768)
             finally:
                 browser.close()

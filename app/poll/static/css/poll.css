@@ -134,38 +134,44 @@ body {
     vertical-align: top;
 }
 
-.team-rankings-rationale-disclosure {
+.team-rankings-rationale-toggle {
     display: none;
-}
-
-.team-rankings-rationale-disclosure > summary {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    min-height: 2.25rem;
-    cursor: pointer;
-    list-style: none;
+    align-items: flex-start;
+    gap: 0.35rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
     font-weight: 600;
+    line-height: 1.5rem;
+    text-align: left;
+    vertical-align: top;
+    cursor: pointer;
 }
 
-.team-rankings-rationale-disclosure > summary::-webkit-details-marker {
-    display: none;
-}
-
-.team-rankings-rationale-disclosure > summary::before {
+.team-rankings-rationale-toggle::before {
     flex: 0 0 0.75rem;
     color: #6c757d;
     content: "▸";
-    line-height: 1;
+    line-height: 1.5rem;
     text-align: center;
 }
 
-.team-rankings-rationale-disclosure[open] > summary::before {
+.team-rankings-rationale-toggle[aria-expanded="true"]::before {
     content: "▾";
 }
 
+.team-rankings-expanded-rationale {
+    display: none !important;
+}
+
+.team-rankings-table > tbody > .team-rankings-expanded-rationale > td {
+    padding: 0.5rem 0.75rem;
+    background-color: #f8f9fa;
+}
+
 .team-rankings-rationale-content {
-    padding: 0 0.1rem 0.35rem 1.15rem;
     overflow-wrap: anywhere;
 }
 
@@ -190,8 +196,12 @@ body {
         display: none;
     }
 
-    .team-rankings-rationale-disclosure {
-        display: block;
+    .team-rankings-rationale-toggle {
+        display: inline-flex;
+    }
+
+    .team-rankings-table > tbody > .team-rankings-expanded-rationale:not([hidden]) {
+        display: table-row !important;
     }
 }
 

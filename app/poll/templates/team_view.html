@@ -71,13 +71,15 @@
                             <td>
                                 <span class="team-rankings-rationale-full">{{ entry.rationale|linebreaksbr }}</span>
                                 {% if entry.rationale %}
-                                    <details class="team-rankings-rationale-disclosure">
-                                        <summary>Rationale</summary>
-                                        <div class="team-rankings-rationale-content">{{ entry.rationale|linebreaksbr }}</div>
-                                    </details>
+                                    <button type="button" class="team-rankings-rationale-toggle" aria-expanded="false" aria-controls="team-rankings-rationale-{{ entry.id }}">Rationale</button>
                                 {% endif %}
                             </td>
                         </tr>
+                        {% if entry.rationale %}
+                            <tr id="team-rankings-rationale-{{ entry.id }}" class="team-rankings-expanded-rationale" hidden>
+                                <td colspan="3"><div class="team-rankings-rationale-content">{{ entry.rationale|linebreaksbr }}</div></td>
+                            </tr>
+                        {% endif %}
                     {% endif %}
                 {% endfor %}
                 </tbody>
@@ -115,13 +117,15 @@
                             <td>
                                 <span class="team-rankings-rationale-full">{{ entry.rationale|linebreaksbr }}</span>
                                 {% if entry.rationale %}
-                                    <details class="team-rankings-rationale-disclosure">
-                                        <summary>Rationale</summary>
-                                        <div class="team-rankings-rationale-content">{{ entry.rationale|linebreaksbr }}</div>
-                                    </details>
+                                    <button type="button" class="team-rankings-rationale-toggle" aria-expanded="false" aria-controls="team-rankings-rationale-{{ entry.id }}">Rationale</button>
                                 {% endif %}
                             </td>
                         </tr>
+                        {% if entry.rationale %}
+                            <tr id="team-rankings-rationale-{{ entry.id }}" class="team-rankings-expanded-rationale" hidden>
+                                <td colspan="3"><div class="team-rankings-rationale-content">{{ entry.rationale|linebreaksbr }}</div></td>
+                            </tr>
+                        {% endif %}
                     {% endif %}
                 {% endfor %}
                 </tbody>
@@ -141,4 +145,17 @@
             </h3>
         </div>
     </div>
+    <script>
+        document.addEventListener('click', function (event) {
+            const button = event.target.closest('.team-rankings-rationale-toggle');
+            if (!button) return;
+
+            const rationale = document.getElementById(button.getAttribute('aria-controls'));
+            if (!rationale) return;
+
+            const expanded = button.getAttribute('aria-expanded') === 'true';
+            button.setAttribute('aria-expanded', String(!expanded));
+            rationale.hidden = expanded;
+        });
+    </script>
 {% endblock %}
