@@ -105,42 +105,54 @@ body {
     margin-left: 10px;
 }
 
-.ballot-comparison-rankings {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0.25rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
+.ballot-comparison-mobile-table {
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 0;
 }
 
-.ballot-comparison-rankings > li {
-    min-width: 0;
+.ballot-comparison-mobile-table > :not(caption) > * > * {
+    padding: 0.2rem 0.1rem;
+    text-align: center;
+    vertical-align: middle;
 }
 
-.ballot-comparison-rankings a {
+.ballot-comparison-mobile-table .ballot-comparison-rank-heading {
+    width: 2.75rem;
+}
+
+.ballot-comparison-mobile-table .ballot-comparison-voter-heading {
+    height: 9rem;
+    padding: 0.35rem 0.1rem;
+    vertical-align: bottom;
+}
+
+.ballot-comparison-mobile-voter-link {
+    display: inline-block;
+    line-height: 1;
+}
+
+.ballot-comparison-mobile-voter-name {
+    display: inline-block;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+}
+
+.ballot-comparison-mobile-table td > a {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    aspect-ratio: 1;
-    padding: 0.25rem;
-    border: 1px solid #dee2e6;
-    border-radius: 0.25rem;
-    background: #f8f9fa;
+    min-height: 1.5rem;
 }
 
-.ballot-comparison-rankings a:focus-visible {
-    outline: 2px solid #0d6efd;
-    outline-offset: 2px;
-}
-
-.ballot-comparison-rankings .team-logo {
+.ballot-comparison-mobile-table .team-logo {
+    display: block;
     max-width: 100%;
-    max-height: 2rem;
+    max-height: 1.5rem;
     width: auto;
     height: auto;
-    margin: 0;
+    margin: 0 auto;
     object-fit: contain;
 }
 

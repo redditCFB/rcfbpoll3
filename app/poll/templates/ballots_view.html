@@ -54,33 +54,43 @@
                 {% endfor %}
             </table>
         </div>
-        <section class="ballot-comparison-mobile d-md-none py-2" aria-label="Ballot rankings">
-            {% for ballot_data in ballots_with_entries %}
-                {% with ballot=ballot_data.ballot %}
-                    <article class="card mb-3 ballot-comparison-card" aria-labelledby="ballot-{{ ballot.id }}-heading">
-                        <h5 class="card-header" id="ballot-{{ ballot.id }}-heading">
-                            <a class="{% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}"
-                               href="/ballot/{{ ballot.id }}/">
-                                {{ ballot.user.username }}
-                            </a>
-                        </h5>
-                        <div class="card-body p-2">
-                            <ol class="ballot-comparison-rankings" role="list" aria-label="{{ ballot.user.username }} ranked teams">
-                                {% for entry in ballot_data.entries %}
-                                    <li>
+        <div class="table-responsive py-2 d-md-none ballot-comparison-mobile">
+            <table class="table table-sm table-striped table-bordered ballot-comparison-mobile-table">
+                <thead>
+                    <tr>
+                        <th scope="col" class="ballot-comparison-rank-heading">Rank</th>
+                        {% for ballot in ballots %}
+                            <th scope="col" class="ballot-comparison-voter-heading">
+                                <a class="ballot-comparison-mobile-voter-link {% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}"
+                                   href="/ballot/{{ ballot.id }}/"
+                                   aria-label="{{ ballot.user.username }} ballot"
+                                   title="{{ ballot.user.username }}">
+                                    <span class="ballot-comparison-mobile-voter-name">{{ ballot.user.username }}</span>
+                                </a>
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in ballot_comparison_rows %}
+                        <tr>
+                            <th scope="row">#{{ row.rank }}</th>
+                            {% for entry in row.entries %}
+                                <td>
+                                    {% if entry %}
                                         <a href="/poll/view/{{ this_poll.id }}/team/{{ entry.team.id }}/"
-                                           aria-label="Rank {{ entry.rank }}: {{ entry.team.short_name }}"
-                                           title="Rank {{ entry.rank }}: {{ entry.team.short_name }}">
+                                           aria-label="Rank {{ row.rank }}: {{ entry.team.short_name }}"
+                                           title="Rank {{ row.rank }}: {{ entry.team.short_name }}">
                                             <img class="team-logo" src="{% team_logo_url entry.team.handle %}" alt="">
                                         </a>
-                                    </li>
-                                {% endfor %}
-                            </ol>
-                        </div>
-                    </article>
-                {% endwith %}
-            {% endfor %}
-        </section>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         <div class="nav py-2">
             {% if previous_page %}
                 <a class="btn btn-primary mx-2" role="button" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/?page={{ previous_page }}">Previous</a>

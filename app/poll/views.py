@@ -169,14 +169,17 @@ def ballots_view(request, poll_id, user_type):
         'team', 'ballot__user'
     ).order_by(Lower('ballot__user__username'), 'rank')
     ballot_entries_pivot = {rank: [] for rank in range(1, 26)}
-    entries_by_ballot = {ballot.id: [] for ballot in this_page_ballots}
+    entries_by_ballot_rank = {ballot.id: {} for ballot in this_page_ballots}
     for entry in ballot_entries:
         ballot_entries_pivot[entry.rank].append(entry)
-        entries_by_ballot[entry.ballot_id].append(entry)
+        entries_by_ballot_rank[entry.ballot_id][entry.rank] = entry
 
-    ballots_with_entries = [
-        {'ballot': ballot, 'entries': entries_by_ballot[ballot.id]}
-        for ballot in this_page_ballots
+    ballot_comparison_rows = [
+        {
+            'rank': rank,
+            'entries': [entries_by_ballot_rank[ballot.id].get(rank) for ballot in this_page_ballots],
+        }
+        for rank in range(1, 26)
     ]
 
     polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
@@ -185,7 +188,7 @@ def ballots_view(request, poll_id, user_type):
         'this_poll': this_poll,
         'ballots': this_page_ballots,
         'ballot_entries': ballot_entries_pivot,
-        'ballots_with_entries': ballots_with_entries,
+        'ballot_comparison_rows': ballot_comparison_rows,
         'polls': polls,
         'user_type': user_type,
         'previous_page': page - 1 if page > 1 else None,

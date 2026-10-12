@@ -376,8 +376,12 @@ class BallotComparisonLayoutBrowserTests(StaticLiveServerTestCase):
                     user_type=user_type,
                 )
                 BallotEntry.objects.bulk_create([
-                    BallotEntry(ballot=ballot, team=team, rank=rank)
-                    for rank, team in enumerate(teams, start=1)
+                    BallotEntry(
+                        ballot=ballot,
+                        team=teams[(rank + voter_number - 2) % len(teams)],
+                        rank=rank,
+                    )
+                    for rank in range(1, len(teams) + 1)
                 ])
 
     def test_phone_ballots_are_readable_without_page_wide_horizontal_scrolling(self):
@@ -402,7 +406,9 @@ class BallotComparisonLayoutBrowserTests(StaticLiveServerTestCase):
                             """() => ({
                                 document: document.documentElement.scrollWidth,
                                 desktop: getComputedStyle(document.querySelector('.ballot-comparison-desktop')).display,
-                                mobile: getComputedStyle(document.querySelector('.ballot-comparison-mobile')).display,
+                                mobileDisplay: getComputedStyle(document.querySelector('.ballot-comparison-mobile')).display,
+                                mobileScroll: document.querySelector('.ballot-comparison-mobile').scrollWidth,
+                                mobileClient: document.querySelector('.ballot-comparison-mobile').clientWidth,
                             })"""
                         )
                         self.assertLessEqual(
@@ -412,35 +418,55 @@ class BallotComparisonLayoutBrowserTests(StaticLiveServerTestCase):
                         )
                         if width < 768:
                             self.assertEqual(metrics['desktop'], 'none')
-                            self.assertNotEqual(metrics['mobile'], 'none')
-                            cards = page.locator('.ballot-comparison-card')
-                            self.assertEqual(cards.count(), 5)
+                            self.assertNotEqual(metrics['mobileDisplay'], 'none')
+                            self.assertLessEqual(
+                                metrics['mobileScroll'],
+                                metrics['mobileClient'],
+                                msg=f'Mobile ballot table scrolls horizontally at {width}px: {metrics}',
+                            )
+                            mobile_table = page.locator('.ballot-comparison-mobile-table')
+                            self.assertTrue(mobile_table.is_visible())
+                            self.assertEqual(mobile_table.locator('thead th').count(), 6)
+                            self.assertEqual(mobile_table.locator('thead th').first.inner_text(), 'Rank')
                             for voter_number in range(1, 6):
-                                card = cards.nth(voter_number - 1)
+                                heading = mobile_table.locator('thead th').nth(voter_number)
+                                voter_name = heading.locator('.ballot-comparison-mobile-voter-name')
                                 self.assertEqual(
-                                    card.locator('h5 a').inner_text().strip(),
+                                    voter_name.inner_text().strip(),
                                     f'{prefix}-voter-{voter_number}',
                                 )
-                                grid = card.locator('.ballot-comparison-rankings')
-                                self.assertEqual(grid.evaluate('element => getComputedStyle(element).display'), 'grid')
                                 self.assertEqual(
-                                    grid.evaluate('element => getComputedStyle(element).gridTemplateColumns.split(" ").length'),
-                                    5,
+                                    voter_name.evaluate('element => getComputedStyle(element).writingMode'),
+                                    'vertical-rl',
                                 )
-                                self.assertEqual(grid.evaluate(
-                                    "element => new Set(Array.from(element.children, item => "
-                                    "Math.round(item.getBoundingClientRect().top))).size"
-                                ), 5)
-                                links = grid.locator('a')
-                                self.assertEqual(links.count(), 25)
-                                self.assertEqual(links.first.get_attribute('aria-label'), 'Rank 1: TEAM01')
-                                self.assertEqual(links.last.get_attribute('aria-label'), 'Rank 25: TEAM25')
-                                self.assertEqual(links.first.locator('img').get_attribute('alt'), '')
-                                self.assertNotIn('TEAM01', card.inner_text())
-                                self.assertNotIn('TEAM25', card.inner_text())
+                                self.assertNotEqual(
+                                    voter_name.evaluate('element => getComputedStyle(element).transform'),
+                                    'none',
+                                )
+
+                            rows = mobile_table.locator('tbody tr')
+                            self.assertEqual(rows.count(), 25)
+                            self.assertTrue(all(row.locator('td').count() == 5 for row in rows.all()))
+                            first_row_links = rows.first.locator('td a')
+                            last_row_links = rows.last.locator('td a')
+                            self.assertEqual(first_row_links.count(), 5)
+                            self.assertEqual(last_row_links.count(), 5)
+                            for voter_index in range(5):
+                                self.assertEqual(
+                                    first_row_links.nth(voter_index).get_attribute('aria-label'),
+                                    f'Rank 1: TEAM{voter_index + 1:02d}',
+                                )
+                            self.assertEqual(last_row_links.first.get_attribute('aria-label'), 'Rank 25: TEAM25')
+                            self.assertEqual(last_row_links.last.get_attribute('aria-label'), 'Rank 25: TEAM04')
+                            self.assertEqual(mobile_table.locator('tbody img').count(), 125)
+                            self.assertTrue(all(
+                                not text.strip()
+                                for row in rows.all()
+                                for text in row.locator('td').all_inner_texts()
+                            ))
                         else:
                             self.assertNotEqual(metrics['desktop'], 'none')
-                            self.assertEqual(metrics['mobile'], 'none')
+                            self.assertEqual(metrics['mobileDisplay'], 'none')
                             self.assertEqual(
                                 page.locator('.ballot-comparison-desktop table tr').count(),
                                 26,
