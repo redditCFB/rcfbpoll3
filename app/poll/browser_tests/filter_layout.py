@@ -221,6 +221,146 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
             finally:
                 browser.close()
 
+    def test_long_voter_names_get_full_width_on_phone_viewports(self):
+        usernames = ('SteemieRayVaughn', 'MemeLovingLoser')
+        expected_weights = {
+            'main-voters': {'SteemieRayVaughn': '700', 'MemeLovingLoser': '400'},
+            'provisional-voters': {'SteemieRayVaughn': '400', 'MemeLovingLoser': '700'},
+        }
+        for username, user_type, before_ap in (
+            ('short-one', UserRole.Role.VOTER, False),
+            ('short-two', UserRole.Role.VOTER, False),
+            (usernames[0], UserRole.Role.VOTER, True),
+            (usernames[1], UserRole.Role.VOTER, False),
+            ('pro-one', UserRole.Role.PROVISIONAL, False),
+            ('pro-two', UserRole.Role.PROVISIONAL, False),
+            (usernames[0], UserRole.Role.PROVISIONAL, False),
+            (usernames[1], UserRole.Role.PROVISIONAL, True),
+        ):
+            user = User.objects.create(username=username)
+            Ballot.objects.create(
+                user=user,
+                poll=self.poll,
+                submission_date=(
+                    self.poll.ap_date - timedelta(minutes=1)
+                    if before_ap
+                    else self.poll.ap_date + timedelta(minutes=1)
+                ),
+                poll_type=Ballot.BallotType.HUMAN,
+                user_type=user_type,
+            )
+
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={'width': 320, 'height': 900}, device_scale_factor=1)
+            try:
+                page.route('**/*.js', lambda route: route.abort())
+                response = page.goto(
+                    f'{self.live_server_url}/poll/voters/{self.poll.id}/',
+                    wait_until='domcontentloaded',
+                )
+                self.assertEqual(response.status, 200)
+                page.wait_for_function(
+                    "getComputedStyle(document.querySelector('#main-voters')).display === 'flex'"
+                )
+
+                def viewport_metrics(width):
+                    page.set_viewport_size({'width': width, 'height': 900})
+                    return page.evaluate(
+                        """(usernames) => {
+                            const sections = ['main-voters', 'provisional-voters'].map(id => {
+                                const section = document.getElementById(id);
+                                const longNames = Object.fromEntries(usernames.map(username => {
+                                    const link = Array.from(section.querySelectorAll('a')).find(
+                                        candidate => candidate.textContent.trim() === username
+                                    );
+                                    const range = document.createRange();
+                                    range.selectNodeContents(link);
+                                    const column = link.parentElement;
+                                    return [username, {
+                                        lineCount: range.getClientRects().length,
+                                        fontWeight: getComputedStyle(link).fontWeight,
+                                        columnWidth: column.getBoundingClientRect().width,
+                                        isLong: column.classList.contains('voter-list-item--long'),
+                                    }];
+                                }));
+                                return {
+                                    id,
+                                    sectionWidth: section.getBoundingClientRect().width,
+                                    longNames,
+                                    shortColumnWidths: Array.from(
+                                        section.querySelectorAll('.col:not(.voter-list-item--long)')
+                                    ).map(column => column.getBoundingClientRect().width),
+                                };
+                            });
+                            return {
+                                documentWidth: document.documentElement.scrollWidth,
+                                sections,
+                            };
+                        }""",
+                        usernames,
+                    )
+
+                for width in (320, 360, 390, 430):
+                    metrics = viewport_metrics(width)
+                    self.assertLessEqual(
+                        metrics['documentWidth'],
+                        width,
+                        msg=f'Document overflows at {width}px: {metrics}',
+                    )
+                    for section_metrics in metrics['sections']:
+                        self.assertEqual(len(section_metrics['shortColumnWidths']), 2)
+                        for short_width in section_metrics['shortColumnWidths']:
+                            self.assertLess(
+                                short_width,
+                                section_metrics['sectionWidth'] * 0.6,
+                                msg=f'Short voter names no longer use two columns at {width}px: {metrics}',
+                            )
+                        for username, entry in section_metrics['longNames'].items():
+                            self.assertTrue(
+                                entry['isLong'],
+                                msg=f'{username} is not classified as long at {width}px: {metrics}',
+                            )
+                            self.assertAlmostEqual(
+                                entry['columnWidth'],
+                                section_metrics['sectionWidth'],
+                                delta=1,
+                                msg=f'{username} does not span the row at {width}px: {metrics}',
+                            )
+                            self.assertEqual(
+                                entry['lineCount'],
+                                1,
+                                msg=f'{username} wraps at {width}px: {metrics}',
+                            )
+                            self.assertEqual(
+                                entry['fontWeight'],
+                                expected_weights[section_metrics['id']][username],
+                                msg=f'Unexpected font weight for {username}: {metrics}',
+                            )
+
+                for width in (768, 1024, 1440):
+                    metrics = viewport_metrics(width)
+                    self.assertLessEqual(
+                        metrics['documentWidth'],
+                        width,
+                        msg=f'Document overflows at {width}px: {metrics}',
+                    )
+                    for section_metrics in metrics['sections']:
+                        short_width = section_metrics['shortColumnWidths'][0]
+                        for username, entry in section_metrics['longNames'].items():
+                            self.assertAlmostEqual(
+                                entry['columnWidth'],
+                                short_width,
+                                delta=1,
+                                msg=f'{username} changes the desktop column width at {width}px: {metrics}',
+                            )
+                            self.assertTrue(
+                                entry['isLong'],
+                                msg=f'{username} lost its long-name classification at {width}px: {metrics}',
+                            )
+            finally:
+                browser.close()
+
     def _read_positions(self):
         result = {'mobile': {}, 'desktop': {}}
         with sync_playwright() as playwright:
