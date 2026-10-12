@@ -143,6 +143,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 0;
+    max-width: 100%;
     min-height: 1.5rem;
 }
 
@@ -154,6 +156,29 @@ body {
     height: auto;
     margin: 0 auto;
     object-fit: contain;
+}
+
+.ballot-comparison-mobile-table .team-logo[hidden] {
+    display: none;
+}
+
+.ballot-comparison-logo-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 1.5rem;
+    font-size: 0.625rem;
+    line-height: 1;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.ballot-comparison-logo-fallback[hidden] {
+    display: none;
 }
 
 .reason-logo {

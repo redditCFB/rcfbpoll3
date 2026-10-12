@@ -384,6 +384,74 @@ class BallotComparisonLayoutBrowserTests(StaticLiveServerTestCase):
                     for rank in range(1, len(teams) + 1)
                 ])
 
+    def test_failed_team_logos_show_short_names_at_320px_without_overflow(self):
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={'width': 320, 'height': 900}, device_scale_factor=1)
+            try:
+                def abort_unneeded_assets(route):
+                    is_script = route.request.resource_type == 'script'
+                    is_team_logo = (
+                        route.request.resource_type == 'image'
+                        and 'comparison-team-' in route.request.url
+                    )
+                    if is_script or is_team_logo:
+                        route.abort()
+                    else:
+                        route.continue_()
+
+                page.route('**/*', abort_unneeded_assets)
+                response = page.goto(
+                    f'{self.live_server_url}/poll/ballots/{self.poll.id}/{UserRole.Role.VOTER}/',
+                    wait_until='domcontentloaded',
+                )
+                self.assertEqual(response.status, 200)
+                page.wait_for_function(
+                    """() => Array.from(document.querySelectorAll(
+                        '.ballot-comparison-mobile-table tbody img'
+                    )).every(image => image.complete && image.naturalWidth === 0)"""
+                )
+
+                table = page.locator('.ballot-comparison-mobile-table')
+                self.assertTrue(table.is_visible())
+                self.assertEqual(table.locator('thead th').count(), 6)
+                self.assertEqual(table.locator('tbody tr').first.locator('td').count(), 5)
+                self.assertEqual(table.locator('tbody img[hidden]').count(), 125)
+                self.assertTrue(all(
+                    not image.is_visible()
+                    for image in table.locator('tbody img').all()
+                ))
+                fallbacks = table.locator('tbody .ballot-comparison-logo-fallback')
+                self.assertEqual(fallbacks.count(), 125)
+                self.assertTrue(all(fallback.is_visible() for fallback in fallbacks.all()))
+                self.assertEqual(
+                    table.locator('tbody tr').first.locator(
+                        '.ballot-comparison-logo-fallback'
+                    ).all_inner_texts(),
+                    ['TEAM01', 'TEAM02', 'TEAM03', 'TEAM04', 'TEAM05'],
+                )
+
+                metrics = page.evaluate(
+                    """() => {
+                        const wrapper = document.querySelector('.ballot-comparison-mobile');
+                        return {
+                            viewport: document.documentElement.clientWidth,
+                            document: document.documentElement.scrollWidth,
+                            wrapperScroll: wrapper.scrollWidth,
+                            wrapperClient: wrapper.clientWidth,
+                            desktopDisplay: getComputedStyle(
+                                document.querySelector('.ballot-comparison-desktop')
+                            ).display,
+                        };
+                    }"""
+                )
+                self.assertEqual(metrics['viewport'], 320)
+                self.assertLessEqual(metrics['document'], 320)
+                self.assertLessEqual(metrics['wrapperScroll'], metrics['wrapperClient'])
+                self.assertEqual(metrics['desktopDisplay'], 'none')
+            finally:
+                browser.close()
+
     def test_phone_ballots_are_readable_without_page_wide_horizontal_scrolling(self):
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch()
@@ -459,11 +527,10 @@ class BallotComparisonLayoutBrowserTests(StaticLiveServerTestCase):
                             self.assertEqual(last_row_links.first.get_attribute('aria-label'), 'Rank 25: TEAM25')
                             self.assertEqual(last_row_links.last.get_attribute('aria-label'), 'Rank 25: TEAM04')
                             self.assertEqual(mobile_table.locator('tbody img').count(), 125)
-                            self.assertTrue(all(
-                                not text.strip()
-                                for row in rows.all()
-                                for text in row.locator('td').all_inner_texts()
-                            ))
+                            self.assertEqual(
+                                mobile_table.locator('tbody .ballot-comparison-logo-fallback').count(),
+                                125,
+                            )
                         else:
                             self.assertNotEqual(metrics['desktop'], 'none')
                             self.assertEqual(metrics['mobileDisplay'], 'none')

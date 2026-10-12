@@ -81,7 +81,11 @@
                                         <a href="/poll/view/{{ this_poll.id }}/team/{{ entry.team.id }}/"
                                            aria-label="Rank {{ row.rank }}: {{ entry.team.short_name }}"
                                            title="Rank {{ row.rank }}: {{ entry.team.short_name }}">
-                                            <img class="team-logo" src="{% team_logo_url entry.team.handle %}" alt="">
+                                            <img class="team-logo"
+                                                 src="{% team_logo_url entry.team.handle %}"
+                                                 alt=""
+                                                 onerror="this.hidden = true; this.nextElementSibling.hidden = false;">
+                                            <span class="ballot-comparison-logo-fallback" hidden>{{ entry.team.short_name }}</span>
                                         </a>
                                     {% endif %}
                                 </td>
