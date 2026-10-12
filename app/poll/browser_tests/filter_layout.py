@@ -337,3 +337,100 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                 };
             }"""
         )
+
+
+class BallotComparisonLayoutBrowserTests(StaticLiveServerTestCase):
+    def setUp(self):
+        now = timezone.now()
+        self.poll = Poll.objects.create(
+            year=now.year,
+            week='Ballot comparison browser test',
+            open_date=now - timedelta(days=2),
+            close_date=now + timedelta(days=2),
+            publish_date=now - timedelta(days=1),
+            ap_date=now - timedelta(days=2),
+        )
+        teams = [
+            Team.objects.create(
+                handle=f'comparison-team-{rank}',
+                name=f'Comparison Team {rank}',
+                conference='Test',
+                division='Test',
+                use_for_ballot=False,
+                short_name=f'TEAM{rank:02d}',
+            )
+            for rank in range(1, 26)
+        ]
+
+        for user_type, prefix in (
+            (UserRole.Role.VOTER, 'main'),
+            (UserRole.Role.PROVISIONAL, 'provisional'),
+        ):
+            for voter_number in range(1, 6):
+                user = User.objects.create(username=f'{prefix}-voter-{voter_number}')
+                ballot = Ballot.objects.create(
+                    user=user,
+                    poll=self.poll,
+                    submission_date=now - timedelta(hours=1),
+                    poll_type=Ballot.BallotType.HUMAN,
+                    user_type=user_type,
+                )
+                BallotEntry.objects.bulk_create([
+                    BallotEntry(ballot=ballot, team=team, rank=rank)
+                    for rank, team in enumerate(teams, start=1)
+                ])
+
+    def test_phone_ballots_are_readable_without_page_wide_horizontal_scrolling(self):
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={'width': 320, 'height': 900}, device_scale_factor=1)
+            try:
+                page.route('**/*.js', lambda route: route.abort())
+                for user_type, prefix in (
+                    (UserRole.Role.VOTER, 'main'),
+                    (UserRole.Role.PROVISIONAL, 'provisional'),
+                ):
+                    response = page.goto(
+                        f'{self.live_server_url}/poll/ballots/{self.poll.id}/{user_type}/',
+                        wait_until='domcontentloaded',
+                    )
+                    self.assertEqual(response.status, 200)
+
+                    for width in (320, 360, 390, 430, 768, 1024, 1440):
+                        page.set_viewport_size({'width': width, 'height': 900})
+                        metrics = page.evaluate(
+                            """() => ({
+                                document: document.documentElement.scrollWidth,
+                                desktop: getComputedStyle(document.querySelector('.ballot-comparison-desktop')).display,
+                                mobile: getComputedStyle(document.querySelector('.ballot-comparison-mobile')).display,
+                            })"""
+                        )
+                        self.assertLessEqual(
+                            metrics['document'],
+                            width,
+                            msg=f'{prefix} ballot page overflows at {width}px: {metrics}',
+                        )
+                        if width < 768:
+                            self.assertEqual(metrics['desktop'], 'none')
+                            self.assertNotEqual(metrics['mobile'], 'none')
+                            cards = page.locator('.ballot-comparison-card')
+                            self.assertEqual(cards.count(), 5)
+                            for voter_number in range(1, 6):
+                                card = cards.nth(voter_number - 1)
+                                self.assertEqual(
+                                    card.locator('h5 a').inner_text().strip(),
+                                    f'{prefix}-voter-{voter_number}',
+                                )
+                                entries = card.locator('.ballot-comparison-rankings > li')
+                                self.assertEqual(entries.count(), 25)
+                                self.assertIn('TEAM01', entries.first.inner_text())
+                                self.assertIn('TEAM25', entries.last.inner_text())
+                        else:
+                            self.assertNotEqual(metrics['desktop'], 'none')
+                            self.assertEqual(metrics['mobile'], 'none')
+                            self.assertEqual(
+                                page.locator('.ballot-comparison-desktop table tr').count(),
+                                26,
+                            )
+            finally:
+                browser.close()

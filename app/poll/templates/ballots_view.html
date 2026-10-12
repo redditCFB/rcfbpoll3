@@ -27,7 +27,7 @@
             <a class="btn btn-outline-secondary" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/export.csv">Download CSV</a>
             <a class="btn btn-outline-secondary" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/export.json">Download JSON</a>
         </div>
-        <div class="py-2">
+        <div class="table-responsive py-2 d-none d-md-block ballot-comparison-desktop">
             <table class="table table-sm table-striped">
                 <tr>
                     <th>User</th>
@@ -54,6 +54,30 @@
                 {% endfor %}
             </table>
         </div>
+        <section class="ballot-comparison-mobile d-md-none py-2" aria-label="Ballot rankings">
+            {% for ballot_data in ballots_with_entries %}
+                {% with ballot=ballot_data.ballot %}
+                    <article class="card mb-3 ballot-comparison-card" aria-labelledby="ballot-{{ ballot.id }}-heading">
+                        <h5 class="card-header" id="ballot-{{ ballot.id }}-heading">
+                            <a class="{% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}"
+                               href="/ballot/{{ ballot.id }}/">
+                                {{ ballot.user.username }}
+                            </a>
+                        </h5>
+                        <ol class="list-group list-group-numbered ballot-comparison-rankings">
+                            {% for entry in ballot_data.entries %}
+                                <li class="list-group-item">
+                                    <img class="team-logo" src="{% team_logo_url entry.team.handle %}" alt="">
+                                    <a href="/poll/view/{{ this_poll.id }}/team/{{ entry.team.id }}/">
+                                        {{ entry.team.short_name }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    </article>
+                {% endwith %}
+            {% endfor %}
+        </section>
         <div class="nav py-2">
             {% if previous_page %}
                 <a class="btn btn-primary mx-2" role="button" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/?page={{ previous_page }}">Previous</a>

@@ -161,12 +161,23 @@ def ballots_view(request, poll_id, user_type):
         poll=this_poll, user_type=user_type, submission_date__isnull=False
     ).order_by(Lower('user__username'))
     ballot_count = ballots.count()
-    this_page_ballots = ballots[(5 * (page - 1)):min(ballot_count, 5 * page)]
+    this_page_ballots = list(
+        ballots.select_related('user')[(5 * (page - 1)):min(ballot_count, 5 * page)]
+    )
 
-    ballot_entries = BallotEntry.objects.filter(ballot__in=this_page_ballots).order_by(Lower('ballot__user__username'))
-    ballot_entries_pivot = {}
-    for rank in range(1, 26):
-        ballot_entries_pivot[rank] = ballot_entries.filter(rank=rank)
+    ballot_entries = BallotEntry.objects.filter(ballot__in=this_page_ballots).select_related(
+        'team', 'ballot__user'
+    ).order_by(Lower('ballot__user__username'), 'rank')
+    ballot_entries_pivot = {rank: [] for rank in range(1, 26)}
+    entries_by_ballot = {ballot.id: [] for ballot in this_page_ballots}
+    for entry in ballot_entries:
+        ballot_entries_pivot[entry.rank].append(entry)
+        entries_by_ballot[entry.ballot_id].append(entry)
+
+    ballots_with_entries = [
+        {'ballot': ballot, 'entries': entries_by_ballot[ballot.id]}
+        for ballot in this_page_ballots
+    ]
 
     polls = Poll.objects.exclude(publish_date__gt=timezone.now()).order_by('-close_date')
 
@@ -174,6 +185,7 @@ def ballots_view(request, poll_id, user_type):
         'this_poll': this_poll,
         'ballots': this_page_ballots,
         'ballot_entries': ballot_entries_pivot,
+        'ballots_with_entries': ballots_with_entries,
         'polls': polls,
         'user_type': user_type,
         'previous_page': page - 1 if page > 1 else None,

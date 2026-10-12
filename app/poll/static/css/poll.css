@@ -105,6 +105,24 @@ body {
     margin-left: 10px;
 }
 
+.ballot-comparison-rankings > .list-group-item {
+    min-width: 0;
+    padding: 0.4rem 0.75rem;
+}
+
+.ballot-comparison-rankings .team-logo {
+    flex: 0 0 2rem;
+    width: 2rem;
+    height: 1.5rem;
+    margin: 0 0.5rem 0 0;
+    object-fit: contain;
+}
+
+.ballot-comparison-rankings a {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .reason-logo {
     height: 15px;
     width: auto;
@@ -451,6 +469,12 @@ body {
 
 .poll-section-nav .nav-link + .nav-link {
     border-inline-start: 1px solid #dee2e6;
+}
+
+@media (max-width: 359.98px) {
+    .poll-section-nav .nav-link {
+        font-size: 1rem;
+    }
 }
 
 @media (max-width: 1399.98px) {
