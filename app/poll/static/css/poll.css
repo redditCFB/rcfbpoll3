@@ -2,6 +2,23 @@ body {
 	padding-top: 70px;
 }
 
+@media (max-width: 767.98px) {
+    .about-tab-nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.25rem;
+    }
+
+    .about-tab-nav .nav-link {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .about-tab-content {
+        min-width: 0;
+    }
+}
+
 @media (max-width: 575.98px) {
     .poll-filter-row > .poll-filter-label,
     .poll-filter-row > .poll-filter-options {
