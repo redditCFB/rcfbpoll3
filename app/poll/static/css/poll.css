@@ -564,3 +564,10 @@ body {
     .beeswarm-copy-desktop { display: none; }
     .beeswarm-copy-mobile { display: inline; }
 }
+
+@media (max-width: 575.98px) {
+    #main-voters > .voter-list-item--long,
+    #provisional-voters > .voter-list-item--long {
+        width: 100%;
+    }
+}
