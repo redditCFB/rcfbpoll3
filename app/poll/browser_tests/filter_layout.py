@@ -400,7 +400,7 @@ class BallotComparisonLayoutBrowserTests(StaticLiveServerTestCase):
                     )
                     self.assertEqual(response.status, 200)
 
-                    for width in (320, 360, 390, 430, 768, 1024, 1440):
+                    for width in (320, 360, 390, 430, 575, 576, 767, 768, 1024, 1440):
                         page.set_viewport_size({'width': width, 'height': 900})
                         metrics = page.evaluate(
                             """() => ({
