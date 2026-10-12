@@ -27,7 +27,7 @@
             <a class="btn btn-outline-secondary" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/export.csv">Download CSV</a>
             <a class="btn btn-outline-secondary" href="/poll/ballots/{{ this_poll.id }}/{{ user_type }}/export.json">Download JSON</a>
         </div>
-        <div class="py-2">
+        <div class="table-responsive py-2 d-none d-md-block ballot-comparison-desktop">
             <table class="table table-sm table-striped">
                 <tr>
                     <th>User</th>
@@ -52,6 +52,47 @@
                         {% endfor %}
                     </tr>
                 {% endfor %}
+            </table>
+        </div>
+        <div class="table-responsive py-2 d-md-none ballot-comparison-mobile">
+            <table class="table table-sm table-striped table-bordered ballot-comparison-mobile-table">
+                <thead>
+                    <tr>
+                        <th scope="col" class="ballot-comparison-rank-heading">Rank</th>
+                        {% for ballot in ballots %}
+                            <th scope="col" class="ballot-comparison-voter-heading">
+                                <a class="ballot-comparison-mobile-voter-link {% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}"
+                                   href="/ballot/{{ ballot.id }}/"
+                                   aria-label="{{ ballot.user.username }} ballot"
+                                   title="{{ ballot.user.username }}">
+                                    <span class="ballot-comparison-mobile-voter-name">{{ ballot.user.username }}</span>
+                                </a>
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in ballot_comparison_rows %}
+                        <tr>
+                            <th scope="row">#{{ row.rank }}</th>
+                            {% for entry in row.entries %}
+                                <td>
+                                    {% if entry %}
+                                        <a href="/poll/view/{{ this_poll.id }}/team/{{ entry.team.id }}/"
+                                           aria-label="Rank {{ row.rank }}: {{ entry.team.short_name }}"
+                                           title="Rank {{ row.rank }}: {{ entry.team.short_name }}">
+                                            <img class="team-logo"
+                                                 src="{% team_logo_url entry.team.handle %}"
+                                                 alt=""
+                                                 onerror="this.hidden = true; this.nextElementSibling.hidden = false;">
+                                            <span class="ballot-comparison-logo-fallback" hidden>{{ entry.team.short_name }}</span>
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </div>
         <div class="nav py-2">

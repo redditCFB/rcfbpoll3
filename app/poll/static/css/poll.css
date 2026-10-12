@@ -105,6 +105,82 @@ body {
     margin-left: 10px;
 }
 
+.ballot-comparison-mobile-table {
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 0;
+}
+
+.ballot-comparison-mobile-table > :not(caption) > * > * {
+    padding: 0.2rem 0.1rem;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.ballot-comparison-mobile-table .ballot-comparison-rank-heading {
+    width: 2.75rem;
+}
+
+.ballot-comparison-mobile-table .ballot-comparison-voter-heading {
+    height: 9rem;
+    padding: 0.35rem 0.1rem;
+    vertical-align: bottom;
+}
+
+.ballot-comparison-mobile-voter-link {
+    display: inline-block;
+    line-height: 1;
+}
+
+.ballot-comparison-mobile-voter-name {
+    display: inline-block;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+}
+
+.ballot-comparison-mobile-table td > a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 1.5rem;
+}
+
+.ballot-comparison-mobile-table .team-logo {
+    display: block;
+    max-width: 100%;
+    max-height: 1.5rem;
+    width: auto;
+    height: auto;
+    margin: 0 auto;
+    object-fit: contain;
+}
+
+.ballot-comparison-mobile-table .team-logo[hidden] {
+    display: none;
+}
+
+.ballot-comparison-logo-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 1.5rem;
+    font-size: 0.625rem;
+    line-height: 1;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.ballot-comparison-logo-fallback[hidden] {
+    display: none;
+}
+
 .reason-logo {
     height: 15px;
     width: auto;
@@ -451,6 +527,12 @@ body {
 
 .poll-section-nav .nav-link + .nav-link {
     border-inline-start: 1px solid #dee2e6;
+}
+
+@media (max-width: 359.98px) {
+    .poll-section-nav .nav-link {
+        font-size: 1rem;
+    }
 }
 
 @media (max-width: 1399.98px) {

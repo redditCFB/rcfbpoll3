@@ -337,3 +337,206 @@ class PollFilterLayoutBrowserTests(StaticLiveServerTestCase):
                 };
             }"""
         )
+
+
+class BallotComparisonLayoutBrowserTests(StaticLiveServerTestCase):
+    def setUp(self):
+        now = timezone.now()
+        self.poll = Poll.objects.create(
+            year=now.year,
+            week='Ballot comparison browser test',
+            open_date=now - timedelta(days=2),
+            close_date=now + timedelta(days=2),
+            publish_date=now - timedelta(days=1),
+            ap_date=now - timedelta(days=2),
+        )
+        teams = [
+            Team.objects.create(
+                handle=f'comparison-team-{rank}',
+                name=f'Comparison Team {rank}',
+                conference='Test',
+                division='Test',
+                use_for_ballot=False,
+                short_name=f'TEAM{rank:02d}',
+            )
+            for rank in range(1, 26)
+        ]
+
+        for user_type, prefix in (
+            (UserRole.Role.VOTER, 'main'),
+            (UserRole.Role.PROVISIONAL, 'provisional'),
+        ):
+            for voter_number in range(1, 6):
+                user = User.objects.create(username=f'{prefix}-voter-{voter_number}')
+                ballot = Ballot.objects.create(
+                    user=user,
+                    poll=self.poll,
+                    submission_date=now - timedelta(hours=1),
+                    poll_type=Ballot.BallotType.HUMAN,
+                    user_type=user_type,
+                )
+                BallotEntry.objects.bulk_create([
+                    BallotEntry(
+                        ballot=ballot,
+                        team=teams[(rank + voter_number - 2) % len(teams)],
+                        rank=rank,
+                    )
+                    for rank in range(1, len(teams) + 1)
+                ])
+
+    def test_failed_team_logos_show_short_names_at_320px_without_overflow(self):
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={'width': 320, 'height': 900}, device_scale_factor=1)
+            try:
+                def abort_unneeded_assets(route):
+                    is_script = route.request.resource_type == 'script'
+                    is_team_logo = (
+                        route.request.resource_type == 'image'
+                        and 'comparison-team-' in route.request.url
+                    )
+                    if is_script or is_team_logo:
+                        route.abort()
+                    else:
+                        route.continue_()
+
+                page.route('**/*', abort_unneeded_assets)
+                response = page.goto(
+                    f'{self.live_server_url}/poll/ballots/{self.poll.id}/{UserRole.Role.VOTER}/',
+                    wait_until='domcontentloaded',
+                )
+                self.assertEqual(response.status, 200)
+                page.wait_for_function(
+                    """() => Array.from(document.querySelectorAll(
+                        '.ballot-comparison-mobile-table tbody img'
+                    )).every(image => image.complete && image.naturalWidth === 0)"""
+                )
+
+                table = page.locator('.ballot-comparison-mobile-table')
+                self.assertTrue(table.is_visible())
+                self.assertEqual(table.locator('thead th').count(), 6)
+                self.assertEqual(table.locator('tbody tr').first.locator('td').count(), 5)
+                self.assertEqual(table.locator('tbody img[hidden]').count(), 125)
+                self.assertTrue(all(
+                    not image.is_visible()
+                    for image in table.locator('tbody img').all()
+                ))
+                fallbacks = table.locator('tbody .ballot-comparison-logo-fallback')
+                self.assertEqual(fallbacks.count(), 125)
+                self.assertTrue(all(fallback.is_visible() for fallback in fallbacks.all()))
+                self.assertEqual(
+                    table.locator('tbody tr').first.locator(
+                        '.ballot-comparison-logo-fallback'
+                    ).all_inner_texts(),
+                    ['TEAM01', 'TEAM02', 'TEAM03', 'TEAM04', 'TEAM05'],
+                )
+
+                metrics = page.evaluate(
+                    """() => {
+                        const wrapper = document.querySelector('.ballot-comparison-mobile');
+                        return {
+                            viewport: document.documentElement.clientWidth,
+                            document: document.documentElement.scrollWidth,
+                            wrapperScroll: wrapper.scrollWidth,
+                            wrapperClient: wrapper.clientWidth,
+                            desktopDisplay: getComputedStyle(
+                                document.querySelector('.ballot-comparison-desktop')
+                            ).display,
+                        };
+                    }"""
+                )
+                self.assertEqual(metrics['viewport'], 320)
+                self.assertLessEqual(metrics['document'], 320)
+                self.assertLessEqual(metrics['wrapperScroll'], metrics['wrapperClient'])
+                self.assertEqual(metrics['desktopDisplay'], 'none')
+            finally:
+                browser.close()
+
+    def test_phone_ballots_are_readable_without_page_wide_horizontal_scrolling(self):
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={'width': 320, 'height': 900}, device_scale_factor=1)
+            try:
+                page.route('**/*.js', lambda route: route.abort())
+                for user_type, prefix in (
+                    (UserRole.Role.VOTER, 'main'),
+                    (UserRole.Role.PROVISIONAL, 'provisional'),
+                ):
+                    response = page.goto(
+                        f'{self.live_server_url}/poll/ballots/{self.poll.id}/{user_type}/',
+                        wait_until='domcontentloaded',
+                    )
+                    self.assertEqual(response.status, 200)
+
+                    for width in (320, 360, 390, 430, 575, 576, 767, 768, 1024, 1440):
+                        page.set_viewport_size({'width': width, 'height': 900})
+                        metrics = page.evaluate(
+                            """() => ({
+                                document: document.documentElement.scrollWidth,
+                                desktop: getComputedStyle(document.querySelector('.ballot-comparison-desktop')).display,
+                                mobileDisplay: getComputedStyle(document.querySelector('.ballot-comparison-mobile')).display,
+                                mobileScroll: document.querySelector('.ballot-comparison-mobile').scrollWidth,
+                                mobileClient: document.querySelector('.ballot-comparison-mobile').clientWidth,
+                            })"""
+                        )
+                        self.assertLessEqual(
+                            metrics['document'],
+                            width,
+                            msg=f'{prefix} ballot page overflows at {width}px: {metrics}',
+                        )
+                        if width < 768:
+                            self.assertEqual(metrics['desktop'], 'none')
+                            self.assertNotEqual(metrics['mobileDisplay'], 'none')
+                            self.assertLessEqual(
+                                metrics['mobileScroll'],
+                                metrics['mobileClient'],
+                                msg=f'Mobile ballot table scrolls horizontally at {width}px: {metrics}',
+                            )
+                            mobile_table = page.locator('.ballot-comparison-mobile-table')
+                            self.assertTrue(mobile_table.is_visible())
+                            self.assertEqual(mobile_table.locator('thead th').count(), 6)
+                            self.assertEqual(mobile_table.locator('thead th').first.inner_text(), 'Rank')
+                            for voter_number in range(1, 6):
+                                heading = mobile_table.locator('thead th').nth(voter_number)
+                                voter_name = heading.locator('.ballot-comparison-mobile-voter-name')
+                                self.assertEqual(
+                                    voter_name.inner_text().strip(),
+                                    f'{prefix}-voter-{voter_number}',
+                                )
+                                self.assertEqual(
+                                    voter_name.evaluate('element => getComputedStyle(element).writingMode'),
+                                    'vertical-rl',
+                                )
+                                self.assertNotEqual(
+                                    voter_name.evaluate('element => getComputedStyle(element).transform'),
+                                    'none',
+                                )
+
+                            rows = mobile_table.locator('tbody tr')
+                            self.assertEqual(rows.count(), 25)
+                            self.assertTrue(all(row.locator('td').count() == 5 for row in rows.all()))
+                            first_row_links = rows.first.locator('td a')
+                            last_row_links = rows.last.locator('td a')
+                            self.assertEqual(first_row_links.count(), 5)
+                            self.assertEqual(last_row_links.count(), 5)
+                            for voter_index in range(5):
+                                self.assertEqual(
+                                    first_row_links.nth(voter_index).get_attribute('aria-label'),
+                                    f'Rank 1: TEAM{voter_index + 1:02d}',
+                                )
+                            self.assertEqual(last_row_links.first.get_attribute('aria-label'), 'Rank 25: TEAM25')
+                            self.assertEqual(last_row_links.last.get_attribute('aria-label'), 'Rank 25: TEAM04')
+                            self.assertEqual(mobile_table.locator('tbody img').count(), 125)
+                            self.assertEqual(
+                                mobile_table.locator('tbody .ballot-comparison-logo-fallback').count(),
+                                125,
+                            )
+                        else:
+                            self.assertNotEqual(metrics['desktop'], 'none')
+                            self.assertEqual(metrics['mobileDisplay'], 'none')
+                            self.assertEqual(
+                                page.locator('.ballot-comparison-desktop table tr').count(),
+                                26,
+                            )
+            finally:
+                browser.close()
