@@ -22,7 +22,7 @@
         <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 py-2" id="main-voters">
             {% for ballot in ballots %}
                 {% if ballot.user_type == 1 %}
-                    <div class="col py-1{% if ballot.user.username|length > 16 %} voter-list-item--long{% endif %}">
+                    <div class="col py-1{% if ballot.user.username|length > 14 %} voter-list-item--long{% endif %}">
                         <a class="text-break {% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.id }}/">
                             {{ ballot.user.username }}
                         </a>
@@ -38,7 +38,7 @@
         <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 py-2" id="provisional-voters">
             {% for ballot in ballots %}
                 {% if ballot.user_type == 2 %}
-                    <div class="col py-1{% if ballot.user.username|length > 16 %} voter-list-item--long{% endif %}">
+                    <div class="col py-1{% if ballot.user.username|length > 14 %} voter-list-item--long{% endif %}">
                         <a class="text-break {% if ballot.poll_type == 1 %}text-primary{% elif ballot.poll_type == 2 %}text-danger{% else %}text-success{% endif %} {% if ballot.submission_date < ballot.poll.ap_date %}fw-bold{% else %}fw-normal{% endif %}" href="/ballot/{{ ballot.id }}/">
                             {{ ballot.user.username }}
                         </a>
