@@ -64,16 +64,19 @@
                                 {{ ballot.user.username }}
                             </a>
                         </h5>
-                        <ol class="list-group list-group-numbered ballot-comparison-rankings">
-                            {% for entry in ballot_data.entries %}
-                                <li class="list-group-item">
-                                    <img class="team-logo" src="{% team_logo_url entry.team.handle %}" alt="">
-                                    <a href="/poll/view/{{ this_poll.id }}/team/{{ entry.team.id }}/">
-                                        {{ entry.team.short_name }}
-                                    </a>
-                                </li>
-                            {% endfor %}
-                        </ol>
+                        <div class="card-body p-2">
+                            <ol class="ballot-comparison-rankings" role="list" aria-label="{{ ballot.user.username }} ranked teams">
+                                {% for entry in ballot_data.entries %}
+                                    <li>
+                                        <a href="/poll/view/{{ this_poll.id }}/team/{{ entry.team.id }}/"
+                                           aria-label="Rank {{ entry.rank }}: {{ entry.team.short_name }}"
+                                           title="Rank {{ entry.rank }}: {{ entry.team.short_name }}">
+                                            <img class="team-logo" src="{% team_logo_url entry.team.handle %}" alt="">
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ol>
+                        </div>
                     </article>
                 {% endwith %}
             {% endfor %}

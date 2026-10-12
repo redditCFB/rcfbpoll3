@@ -421,10 +421,23 @@ class BallotComparisonLayoutBrowserTests(StaticLiveServerTestCase):
                                     card.locator('h5 a').inner_text().strip(),
                                     f'{prefix}-voter-{voter_number}',
                                 )
-                                entries = card.locator('.ballot-comparison-rankings > li')
-                                self.assertEqual(entries.count(), 25)
-                                self.assertIn('TEAM01', entries.first.inner_text())
-                                self.assertIn('TEAM25', entries.last.inner_text())
+                                grid = card.locator('.ballot-comparison-rankings')
+                                self.assertEqual(grid.evaluate('element => getComputedStyle(element).display'), 'grid')
+                                self.assertEqual(
+                                    grid.evaluate('element => getComputedStyle(element).gridTemplateColumns.split(" ").length'),
+                                    5,
+                                )
+                                self.assertEqual(grid.evaluate(
+                                    "element => new Set(Array.from(element.children, item => "
+                                    "Math.round(item.getBoundingClientRect().top))).size"
+                                ), 5)
+                                links = grid.locator('a')
+                                self.assertEqual(links.count(), 25)
+                                self.assertEqual(links.first.get_attribute('aria-label'), 'Rank 1: TEAM01')
+                                self.assertEqual(links.last.get_attribute('aria-label'), 'Rank 25: TEAM25')
+                                self.assertEqual(links.first.locator('img').get_attribute('alt'), '')
+                                self.assertNotIn('TEAM01', card.inner_text())
+                                self.assertNotIn('TEAM25', card.inner_text())
                         else:
                             self.assertNotEqual(metrics['desktop'], 'none')
                             self.assertEqual(metrics['mobile'], 'none')

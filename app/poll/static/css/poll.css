@@ -105,22 +105,43 @@ body {
     margin-left: 10px;
 }
 
-.ballot-comparison-rankings > .list-group-item {
-    min-width: 0;
-    padding: 0.4rem 0.75rem;
+.ballot-comparison-rankings {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
-.ballot-comparison-rankings .team-logo {
-    flex: 0 0 2rem;
-    width: 2rem;
-    height: 1.5rem;
-    margin: 0 0.5rem 0 0;
-    object-fit: contain;
+.ballot-comparison-rankings > li {
+    min-width: 0;
 }
 
 .ballot-comparison-rankings a {
-    min-width: 0;
-    overflow-wrap: anywhere;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 0.25rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    background: #f8f9fa;
+}
+
+.ballot-comparison-rankings a:focus-visible {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+.ballot-comparison-rankings .team-logo {
+    max-width: 100%;
+    max-height: 2rem;
+    width: auto;
+    height: auto;
+    margin: 0;
+    object-fit: contain;
 }
 
 .reason-logo {
