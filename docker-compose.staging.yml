@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   nginx-proxy:
     container_name: nginx-proxy
@@ -33,6 +31,7 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile.prod
+    image: ${POLL_IMAGE:-rcfbpoll:local}
     command: gunicorn rcfbpoll.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - static_volume:/home/app/poll/static
@@ -48,6 +47,7 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile.prod
+    image: ${POLL_IMAGE:-rcfbpoll:local}
     command: sh -c 'python manage.py migrate --noinput && python manage.py update_team_logo_handles && python manage.py screen_open_provisional_applications && python manage.py collectstatic --noinput'
     volumes:
       - static_volume:/home/app/poll/static
