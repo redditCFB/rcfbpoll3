@@ -146,49 +146,118 @@ the source tar on the build host.
 
 ### Enable operator-only maintenance access
 
-The live Compose file binds `nginx-proxy` to VM ports 80 and 443; `poll` only
-exposes port 8000 inside Docker. `nginx/Dockerfile` uses `jwilder/nginx-proxy`
-0.9, and its per-host file `/etc/nginx/vhost.d/<VIRTUAL_HOST>` is included in
-the HTTPS server block at server scope. The existing `vhost.d/default` file
-contains the static-file location. The procedure below saves the current
-per-host file, or copies `default` when no per-host file exists, then adds a
-server-level source-IP allowlist followed by `deny all`. Nginx allows these
-directives at server scope and inherits them into locations unless a location
-defines its own access rules; the generated app and static locations do not.
-This restricts app, admin, ballot, OAuth callback, and static-file URLs while
-preserving the existing TLS certificate and hostname. HTTP continues to
-redirect to HTTPS; the HTTP endpoint does not proxy requests to the application.
-The per-host include is visible in the [nginx-proxy 0.9 template](https://github.com/nginx-proxy/nginx-proxy/blob/0.9.3/nginx.tmpl), and the inheritance behavior is documented by [Nginx](https://nginx.org/en/docs/http/ngx_http_access_module.html).
+The live Compose file binds nginx-proxy to VM ports 80 and 443; poll only
+exposes port 8000 inside Docker. The expected production hostname is
+poll.redditcfb.com. The checked-in .env.staging may not represent the live
+environment: verify the running poll container's VIRTUAL_HOST and stop if it is
+not exactly poll.redditcfb.com. Also verify that the Nginx TLS virtual host
+uses that hostname before proceeding.
 
-Use the app's configured hostname, currently
-`poll-staging.redditcfb.com`, and the VM's public origin IPv4 address. Set
-`OPERATOR_CIDR` to the operator workstation's public egress address as seen
-when it connects directly to the VM, with `/32` for one IPv4 address. Since
-the Compose proxy publishes 443 on the VM, this works without Cloudflare
-access. If public DNS is proxied through Cloudflare or another CDN, temporarily
-map the hostname to the VM origin on the operator workstation so Nginx sees
-the operator's address instead of a shared CDN address. Use the HTTPS hostname
-for all browser tests; do not browse to the IP. That preserves the certificate,
-secure cookies, and the registered Reddit OAuth redirect URI.
+nginx/Dockerfile uses jwilder/nginx-proxy 0.9. Its [0.9.0 template](https://github.com/nginx-proxy/nginx-proxy/blob/0.9.0/nginx.tmpl)
+chooses /etc/nginx/vhost.d/<VIRTUAL_HOST> or, if absent,
+/etc/nginx/vhost.d/default when docker-gen renders the generated server
+configuration. Its [Procfile](https://github.com/nginx-proxy/nginx-proxy/blob/0.9.0/Procfile)
+runs docker-gen as a container watcher and reloads Nginx on container changes.
+The Compose file mounts vhost at /etc/nginx/vhost.d; the repository's
+nginx/vhost.d/default contains the static-file location and is shared by
+virtual hosts. Never add the allowlist to that shared file. Use nginx -T to
+identify the include in the TLS server block for poll.redditcfb.com. If that
+block already includes the host-specific file, back up and edit that file. If
+it includes default, copy its current contents to the host-specific file and
+explicitly render the generated configuration once. The Nginx access rules are
+inherited by locations without their own allow or deny rules; inspect nginx -T
+and stop if a location-specific rule could bypass the server-level gate. The
+repository's static-file location has no such rule. See [Nginx access-module
+inheritance](https://nginx.org/en/docs/http/ngx_http_access_module.html).
 
-On the operator workstation, set the hostname and origin address to the same
-values used on the VM. Determine the workstation's public IPv4 egress address
-there and use it with `/32` for `OPERATOR_CIDR` on the VM. If the workstation
-uses a VPN or proxy, make sure its direct route to the VM uses this same source
-address. This is an IP allowlist: any other device sharing that same public
-egress address can also reach the site during maintenance.
+The host-specific override persists in the existing vhost volume. Explicitly
+render with the image's docker-gen /app/nginx.tmpl /etc/nginx/conf.d/default.conf
+command without -watch or -notify, then run nginx -t and reload only if the
+syntax test passes. This avoids relying on file creation to trigger the
+watcher. When the upgraded poll container starts, the existing watcher will
+render again; the template selects the still-present host-specific override.
+After that start, inspect nginx -T and repeat the access checks before any
+smoke tests. If a gate activation or validation step fails, stop the poll
+service and leave the gate backup files in place; do not take the snapshot or
+start the upgraded application until the gate is proven active.
+
+On the VM, before stopping the old app, verify its runtime host and inspect the
+effective configuration. These checks deliberately compare the live container,
+not the hostname in a checked-in sample file:
 
 ```sh
-export POLL_HOST=poll-staging.redditcfb.com
+set -eu
+export POLL_HOST=poll.redditcfb.com
+export VM_ORIGIN_IPV4=VM_PUBLIC_IPV4
+export OPERATOR_CIDR=OPERATOR_PUBLIC_IPV4/32
+export POLL_OLD_CONTAINER_ID="$(docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" ps -q poll)"
+test -n "$POLL_OLD_CONTAINER_ID"
+POLL_RUNNING_HOST="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$POLL_OLD_CONTAINER_ID" | sed -n 's/^VIRTUAL_HOST=//p')"
+test "$POLL_RUNNING_HOST" = "$POLL_HOST" || { echo "VIRTUAL_HOST is '$POLL_RUNNING_HOST', expected '$POLL_HOST'; stop" >&2; exit 1; }
+POLL_RUNNING_ALLOWED_HOSTS="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$POLL_OLD_CONTAINER_ID" | sed -n 's/^DJANGO_ALLOWED_HOSTS=//p')"
+case ",$POLL_RUNNING_ALLOWED_HOSTS," in *,"$POLL_HOST",*) ;; *) echo "DJANGO_ALLOWED_HOSTS does not include $POLL_HOST; stop" >&2; exit 1;; esac
+POLL_STAGED_HOST="$(sed -n 's/^VIRTUAL_HOST=//p' "$POLL_NEW_DIR/.env.staging")"
+test "$POLL_STAGED_HOST" = "$POLL_HOST" || { echo "staged VIRTUAL_HOST is '$POLL_STAGED_HOST', expected '$POLL_HOST'; stop" >&2; exit 1; }
+```
+
+Capture nginx -T output with restrictive permissions. Inspect the
+server_name poll.redditcfb.com TLS server (the block listening on 443), its
+include /etc/nginx/vhost.d/... line, its certificate, and any location-level
+allow or deny rules. Set POLL_ACTIVE_INCLUDE to exactly the included file
+shown there. The only supported values below are default and the
+hostname-specific file; stop if the active TLS block uses a different include,
+the TLS server name differs, or a host-specific file exists but is not the
+active include. Also inspect the port-80 server: under the configured redirect
+mode it must redirect application paths to HTTPS; if it is in noredirect mode,
+the same host-specific file must gate HTTP as well. Stop if any HTTP path can
+reach the application without this restriction.
+
+```sh
+set -eu
+umask 077
+export POLL_NGINX_DUMP=/private/staging/nginx.before-maintenance.txt
+docker exec nginx-proxy nginx -T > "$POLL_NGINX_DUMP" 2>&1
+grep -Fq "server_name $POLL_HOST;" "$POLL_NGINX_DUMP" || { echo "Nginx does not contain the expected virtual host $POLL_HOST; stop" >&2; exit 1; }
+grep -n -B 3 -A 35 -F "server_name $POLL_HOST;" "$POLL_NGINX_DUMP"
+docker exec nginx-proxy test -x /usr/local/bin/docker-gen
+docker exec nginx-proxy test -r /app/nginx.tmpl
+docker exec nginx-proxy grep -F 'docker-gen -watch -notify "nginx -s reload" /app/nginx.tmpl /etc/nginx/conf.d/default.conf' /app/Procfile
+export POLL_ACTIVE_INCLUDE=/etc/nginx/vhost.d/default
+# If nginx -T shows the host-specific include in that TLS server instead, use:
+# export POLL_ACTIVE_INCLUDE="/etc/nginx/vhost.d/$POLL_HOST"
+```
+
+On the operator workstation, use the same hostname and origin address. Obtain
+the workstation's public IPv4 egress address as seen by the VM and use it with
+/32 for OPERATOR_CIDR. If the workstation uses a VPN or proxy, verify that the
+direct route to the VM uses that address. This allowlist also permits any
+other device sharing that public egress address during maintenance. Since the
+Compose proxy publishes port 443 on the VM, no Cloudflare access is needed.
+If public DNS is proxied through Cloudflare or another CDN, map the hostname
+temporarily to the VM origin on the operator workstation so Nginx sees the
+operator's source address. Keep the HTTPS hostname in the browser and OAuth
+flow; do not browse to the IP. This preserves TLS verification, secure-cookie
+host handling, and the registered Reddit OAuth redirect hostname.
+
+```sh
+export POLL_HOST=poll.redditcfb.com
 export VM_ORIGIN_IPV4=VM_PUBLIC_IPV4
 export OPERATOR_CIDR="$(curl -4fsS https://api.ipify.org)/32"
 printf '%s %s\n' "$VM_ORIGIN_IPV4" "$POLL_HOST" | sudo tee -a /etc/hosts
 ```
 
-On Windows, add the same `VM_ORIGIN_IPV4 poll-staging.redditcfb.com` line to
-`C:\Windows\System32\drivers\etc\hosts` as Administrator. Remove this
-entry after the maintenance window. A command-line request that bypasses DNS
-can use:
+Copy the reported CIDR to the VM shell with the same origin and hostname:
+
+```sh
+export POLL_HOST=poll.redditcfb.com
+export VM_ORIGIN_IPV4=VM_PUBLIC_IPV4
+export OPERATOR_CIDR=OPERATOR_PUBLIC_IPV4/32
+```
+
+On Windows, add VM_ORIGIN_IPV4 poll.redditcfb.com to
+C:\Windows\System32\drivers\etc\hosts as Administrator. Remove the entry
+after the maintenance window. A direct-origin HTTPS request from the operator
+workstation is:
 
 ```sh
 curl --resolve "${POLL_HOST}:443:${VM_ORIGIN_IPV4}" \
@@ -196,71 +265,102 @@ curl --resolve "${POLL_HOST}:443:${VM_ORIGIN_IPV4}" \
   "https://${POLL_HOST}/"
 ```
 
-The request from the allowlisted workstation must not return 403. The same
-request from a non-allowlisted network must return 403.
-
-These checks use the HTTPS hostname and connect directly to the VM origin.
-
-Set the following on the VM, replacing the origin and operator placeholders:
-
-```sh
-export POLL_HOST=poll-staging.redditcfb.com
-export VM_ORIGIN_IPV4=VM_PUBLIC_IPV4
-export OPERATOR_CIDR=OPERATOR_PUBLIC_IPV4/32
-```
-
-Install the gate into the existing `nginx-proxy` container. The original file
-and the allowlisted address are backed up in the existing `vhost` volume so
-the same commands can remove the restriction exactly. The script validates
-the hostname and address characters, tests the resulting Nginx configuration,
-and reloads only after the test succeeds. If the test fails, it restores the
-original file and exits; do not continue to the snapshot until the reload and
-access checks succeed.
+Create a host-specific override, preserving the effective original contents
+and recording whether the host-specific file existed. The shared default file
+is only read, never modified. This script refuses an unexpected active include
+or stale backup markers. It writes allow and deny before the saved contents so
+the operator rule is evaluated first.
 
 ```sh
-docker exec -i nginx-proxy sh -s -- "$POLL_HOST" "$OPERATOR_CIDR" <<'SH'
+if ! docker exec -i nginx-proxy sh -s -- "$POLL_HOST" "$OPERATOR_CIDR" "$POLL_ACTIVE_INCLUDE" <<'SH'
 set -eu
 host=$1
 cidr=$2
+active=$3
 dir=/etc/nginx/vhost.d
 case "$host" in *[!A-Za-z0-9.-]*|'') echo "invalid host" >&2; exit 2;; esac
-case "$cidr" in *[!0-9./:]*|'') echo "invalid CIDR" >&2; exit 2;; esac
+case "$cidr" in *[!0-9./]*|'') echo "invalid IPv4 CIDR" >&2; exit 2;; esac
 file="$dir/$host"
+default="$dir/default"
 backup="$dir/.${host}.maintenance-original"
 absent="$dir/.${host}.maintenance-was-absent"
 allowfile="$dir/.${host}.maintenance-allow"
+test "$active" = "$default" || test "$active" = "$file"
 test ! -e "$backup" && test ! -e "$absent" && test ! -e "$allowfile"
 if [ -e "$file" ]; then
+  test ! -L "$file"
+  test "$active" = "$file"
   cp -p "$file" "$backup"
 else
-  test -s "$dir/default"
-  cp -p "$dir/default" "$backup"
+  test "$active" = "$default" && test -s "$default"
+  cp -p "$default" "$backup"
   : > "$absent"
 fi
 printf '%s\n' "$cidr" > "$allowfile"
 {
+  printf 'allow %s;\ndeny all;\n\n' "$cidr"
   cat "$backup"
-  printf '\nallow %s;\ndeny all;\n' "$cidr"
 } > "$file.tmp"
+chmod "$(stat -c '%a' "$backup")" "$file.tmp"
 mv "$file.tmp" "$file"
-if nginx -t; then
-  nginx -s reload
-else
-  if [ -e "$absent" ]; then rm -f "$file" "$absent"; else cp -p "$backup" "$file"; fi
-  rm -f "$backup" "$allowfile" "$file.tmp"
+resolvers=$(awk '$1 == "nameserver" {print ($2 ~ ":")? "["$2"]": $2}' ORS=' ' /etc/resolv.conf | sed 's/ *$//g')
+test -n "$resolvers"
+RESOLVERS="$resolvers" docker-gen /app/nginx.tmpl /etc/nginx/conf.d/default.conf
+nginx -t
+nginx -s reload
+SH
+then
+  docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" stop --timeout 60 poll
+  echo "Gate activation failed; poll is stopped. Keep the backups and do not continue." >&2
   exit 1
 fi
-SH
 ```
 
-Confirm the gate is active before stopping writers: from the operator
-workstation, request the direct origin over HTTPS and confirm it is not a
-403; from a separate non-allowlisted network, the same request must return
-403. Also confirm `docker exec nginx-proxy nginx -t` succeeds. If the direct
-origin route, certificate hostname, or observed client address differs from
-these assumptions, stop and correct the network/allowlist values before the
-snapshot. Do not substitute the CDN's address in `OPERATOR_CIDR`; doing so
-would allow other public users sharing that address.
+The upstream nginx-proxy 0.9.0 image pins docker-gen 0.7.6. Its [CLI usage](https://github.com/nginx-proxy/docker-gen/blob/0.7.6/README.md#usage)
+accepts a template and destination without watch mode; it renders once and exits
+when -watch and -notify are omitted. This is the template-render step from the
+0.9 watcher, with automatic reload omitted so this procedure can test syntax first. After the reload, dump the effective
+configuration again and confirm the TLS server for this hostname includes
+/etc/nginx/vhost.d/poll.redditcfb.com, and that the same server contains
+allow OPERATOR_CIDR; followed by deny all;. Also verify no location-level
+access rule overrides it. nginx -t and a successful reload alone do not prove
+the intended server uses the gate.
+
+```bash
+set -eu
+trap 'docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" stop --timeout 60 poll' ERR
+export POLL_NGINX_DUMP=/private/staging/nginx.maintenance.txt
+docker exec nginx-proxy nginx -T > "$POLL_NGINX_DUMP" 2>&1
+grep -n -B 3 -A 40 -F "server_name $POLL_HOST;" "$POLL_NGINX_DUMP"
+grep -Fq "include /etc/nginx/vhost.d/$POLL_HOST;" "$POLL_NGINX_DUMP"
+grep -Fq "allow $OPERATOR_CIDR;" "$POLL_NGINX_DUMP"
+grep -Fq 'deny all;' "$POLL_NGINX_DUMP"
+   docker exec nginx-proxy grep -Fqx "allow $OPERATOR_CIDR;" "/etc/nginx/vhost.d/$POLL_HOST"
+   docker exec nginx-proxy grep -Fqx 'deny all;' "/etc/nginx/vhost.d/$POLL_HOST"
+```
+
+Now verify actual access, using the workstation's hosts mapping or curl
+--resolve above. The allowlisted operator request must reach the app without
+HTTP 403 (normally 200 or a login redirect):
+
+```sh
+set -eu
+POLL_OPERATOR_STATUS="$(curl --resolve "${POLL_HOST}:443:${VM_ORIGIN_IPV4}" -sS -o /dev/null -w '%{http_code}' "https://${POLL_HOST}/")"
+test "$POLL_OPERATOR_STATUS" != 403
+```
+
+From a separate, non-allowlisted network, run the direct-origin request and
+require exactly HTTP 403:
+
+```sh
+set -eu
+POLL_NONOPERATOR_STATUS="$(curl --resolve "${POLL_HOST}:443:${VM_ORIGIN_IPV4}" -sS -o /dev/null -w '%{http_code}' "https://${POLL_HOST}/")"
+test "$POLL_NONOPERATOR_STATUS" = 403
+```
+
+Do not continue to the snapshot unless the operator gets a non-403 response and the
+non-allowlisted request gets 403. If either access check or the effective-config check fails, immediately run `docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" stop --timeout 60 poll` on the VM and keep scheduled writers stopped. Do not use a CDN IP in OPERATOR_CIDR.
+
 
 ### Freeze writers and snapshot the original state
 
@@ -284,9 +384,9 @@ would allow other public users sharing that address.
    ```
 
    Record `POLL_OLD_REVISION`, `POLL_OLD_IMAGE_ID`, and `POLL_OLD_IMAGE` in
-   the deployment record, along with the `git status --short` output and the
-   `.env.staging*` checksums printed during setup. Stop every other writer
-   before proceeding.
+   the deployment record, along with the verified hostname, VM origin,
+   operator CIDR, active Nginx include path, checkout status, and staged env
+   file checksums. Stop every other writer before proceeding.
 
 2. Verify the running database is PostgreSQL 17 on the existing named volume.
    Record the mountpoints for Docker storage, PostgreSQL, static files, and the
@@ -372,7 +472,9 @@ would allow other public users sharing that address.
    ID, compare volume names and mountpoints with the saved record, and inspect
    application/database/proxy logs.
 
-   ```sh
+   ```bash
+   set -eu
+   trap 'docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" stop --timeout 60 poll' ERR
    docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" up -d --no-deps --no-build --pull never poll
    docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" ps poll db
    test "$(docker inspect --format '{{.Image}}' "$(docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" ps -q poll)")" = 'IMAGE_ID_RECORDED_ON_BUILD_HOST'
@@ -382,14 +484,29 @@ would allow other public users sharing that address.
      "${POLL_PROJECT}_vhost" "${POLL_PROJECT}_acme" > "$POLL_VOLUME_RECORD.after"
    diff -u "$POLL_VOLUME_RECORD" "$POLL_VOLUME_RECORD.after"
    docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" logs --tail=100 poll db
+   POLL_NEW_CONTAINER_ID="$(docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" ps -q poll)"
+   POLL_NEW_HOST="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$POLL_NEW_CONTAINER_ID" | sed -n 's/^VIRTUAL_HOST=//p')"
+   test "$POLL_NEW_HOST" = "$POLL_HOST" || { echo "new VIRTUAL_HOST is '$POLL_NEW_HOST', expected '$POLL_HOST'; stop" >&2; exit 1; }
+   docker exec nginx-proxy nginx -t
+   export POLL_NGINX_DUMP=/private/staging/nginx.after-app-start.txt
+   docker exec nginx-proxy nginx -T > "$POLL_NGINX_DUMP" 2>&1
+   grep -n -B 3 -A 40 -F "server_name $POLL_HOST;" "$POLL_NGINX_DUMP"
+   grep -Fq "include /etc/nginx/vhost.d/$POLL_HOST;" "$POLL_NGINX_DUMP"
+   grep -Fq "allow $OPERATOR_CIDR;" "$POLL_NGINX_DUMP"
+   grep -Fq 'deny all;' "$POLL_NGINX_DUMP"
+   docker exec nginx-proxy grep -Fqx "allow $OPERATOR_CIDR;" "/etc/nginx/vhost.d/$POLL_HOST"
+   docker exec nginx-proxy grep -Fqx 'deny all;' "/etc/nginx/vhost.d/$POLL_HOST"
    ```
 
    A successful comparison confirms Compose reused the existing PostgreSQL,
    static, certificate, and proxy volumes instead of creating volumes under a
-   checkout-derived project name.
+   checkout-derived project name. The poll start generates an Nginx-proxy
+   container event; confirm that its generated TLS server still uses the
+   per-host gate, then repeat the operator non-403 and external 403 checks
+   before any smoke test. If any check fails, stop poll and do not proceed.
 
 6. From the operator workstation, use
-   `https://poll-staging.redditcfb.com` with its temporary origin hosts entry.
+   `https://poll.redditcfb.com` with its temporary origin hosts entry.
    While the allowlist is active, verify login **and logout**, Reddit OAuth
    sign-in and callback, existing ballot viewing, a test ballot submission and
    persisted readback, admin access and provisional-voter management, and
@@ -412,13 +529,14 @@ would allow other public users sharing that address.
    messages if rollback is later needed.
 
 7. Disable the gate only after every smoke test passes and the operator accepts
-   the logs. This restores the exact host-specific file (or returns to the
-   saved default file), tests the resulting Nginx config, and reloads the proxy.
-   If `nginx -t` or reload fails, the script puts the allowlist back on disk;
-   leave scheduled jobs stopped and resolve the proxy issue before continuing.
+   the logs. Restore the original host-specific file, or remove the temporary
+   host-specific override if it did not exist before maintenance. Render the
+   generated configuration without the watch/notify flags, syntax-test it, and
+   reload only after the test succeeds. The saved files remain until the external
+   access check succeeds.
 
    ```sh
-   docker exec -i nginx-proxy sh -s -- "$POLL_HOST" <<'SH'
+   if ! docker exec -i nginx-proxy sh -s -- "$POLL_HOST" <<'SH'
    set -eu
    host=$1
    dir=/etc/nginx/vhost.d
@@ -427,24 +545,72 @@ would allow other public users sharing that address.
    absent="$dir/.${host}.maintenance-was-absent"
    allowfile="$dir/.${host}.maintenance-allow"
    test -f "$backup" && test -f "$allowfile"
-   if [ -e "$absent" ]; then rm -f "$file"; else cp -p "$backup" "$file"; fi
-   if nginx -t && nginx -s reload; then
-     rm -f "$backup" "$absent" "$allowfile" "$file.tmp"
+   if [ -e "$absent" ]; then
+     rm -f "$file"
    else
-     cidr=$(cat "$allowfile")
-     {
-       cat "$backup"
-       printf '\nallow %s;\ndeny all;\n' "$cidr"
-     } > "$file.tmp"
-     mv "$file.tmp" "$file"
+     cp -p "$backup" "$file"
+   fi
+   resolvers=$(awk '$1 == "nameserver" {print ($2 ~ ":")? "["$2"]": $2}' ORS=' ' /etc/resolv.conf | sed 's/ *$//g')
+   test -n "$resolvers"
+   RESOLVERS="$resolvers" docker-gen /app/nginx.tmpl /etc/nginx/conf.d/default.conf
+   nginx -t
+   nginx -s reload
+   SH
+   then
+     docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" stop --timeout 60 poll
+     echo "Gate restoration failed; poll is stopped. Keep backups and do not restart writers." >&2
      exit 1
+   fi
+   ```
+
+   Verify the actual included file and compare it with the pre-maintenance copy.
+   If it was absent originally, the generated TLS server should include default
+   again and the host-specific file must be absent. If it existed, the file must
+   match the saved bytes. Inspect nginx -T for the poll.redditcfb.com TLS server
+   and confirm its access rules match the captured pre-maintenance configuration.
+
+   ```bash
+   set -eu
+   trap 'docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" stop --timeout 60 poll' ERR
+   docker exec nginx-proxy nginx -T > "$POLL_NGINX_DUMP" 2>&1
+   grep -n -B 3 -A 40 -F "server_name $POLL_HOST;" "$POLL_NGINX_DUMP"
+   docker exec -i nginx-proxy sh -s -- "$POLL_HOST" <<'SH'
+   set -eu
+   host=$1
+   dir=/etc/nginx/vhost.d
+   file="$dir/$host"
+   backup="$dir/.${host}.maintenance-original"
+   absent="$dir/.${host}.maintenance-was-absent"
+   if [ -e "$absent" ]; then
+     test ! -e "$file"
+     grep -Fq 'include /etc/nginx/vhost.d/default;' /etc/nginx/conf.d/default.conf
+   else
+     cmp -s "$file" "$backup"
+     grep -Fq "include /etc/nginx/vhost.d/$host;" /etc/nginx/conf.d/default.conf
    fi
    SH
    ```
 
-   From a non-allowlisted network, confirm the public HTTPS hostname now
-   reaches the validated app. Then restart the recorded scheduled jobs and
-   remove the temporary hosts-file entry from the operator workstation.
+   From a non-allowlisted network, use the direct-origin HTTPS hostname and
+   require a response other than 403 (normally 200 or a login redirect). If this
+   check or any restoration check fails, immediately run `docker compose -p "$POLL_PROJECT" -f "$POLL_COMPOSE" stop --timeout 60 poll` on the VM, keep scheduled writers stopped, and leave the backup markers in place while repairing the gate. Do not restart the scheduled jobs until public access reaches the
+   validated app. Once the effective configuration and external check pass,
+   remove the maintenance backups and marker files, then restart the recorded
+   scheduled jobs and remove the temporary hosts-file entry from the operator
+   workstation:
+
+   ```sh
+   docker exec -i nginx-proxy sh -s -- "$POLL_HOST" <<'SH'
+   set -eu
+   host=$1
+   dir=/etc/nginx/vhost.d
+   rm -f "$dir/.${host}.maintenance-original" \
+     "$dir/.${host}.maintenance-was-absent" \
+     "$dir/.${host}.maintenance-allow" "$dir/$host.tmp"
+   SH
+   ```
+
+
 
 ## Rollback and cleanup
 
@@ -467,10 +633,14 @@ the snapshot:
 export POLL_PROJECT=rcfbpoll3
 export POLL_OLD_DIR=/path/to/original/live/checkout
 export POLL_OLD_COMPOSE="$POLL_OLD_DIR/docker-compose.staging.yml"
+export POLL_COMPOSE="$POLL_OLD_COMPOSE"
 export POLL_OLD_REVISION=RECORDED_OLD_REVISION
 export POLL_OLD_IMAGE=rcfbpoll:preupgrade-REVIEWED_SHA
 export POLL_OLD_IMAGE_ID=RECORDED_OLD_IMAGE_ID
-export POLL_HOST=poll-staging.redditcfb.com
+export POLL_HOST=poll.redditcfb.com
+export OPERATOR_CIDR=RECORDED_OPERATOR_PUBLIC_IPV4/32
+export POLL_NGINX_DUMP=/private/staging/nginx.rollback.txt
+set -eu
 test "$(git -C "$POLL_OLD_DIR" rev-parse HEAD)" = "$POLL_OLD_REVISION"
 git -C "$POLL_OLD_DIR" status --short
 sha256sum \
@@ -482,8 +652,7 @@ docker volume inspect \
   "${POLL_PROJECT}_vhost"
 docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" ps -a db poll migrate
 docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" start nginx-proxy
-docker exec nginx-proxy nginx -t
-docker exec nginx-proxy nginx -s reload
+docker exec nginx-proxy sh -c 'nginx -t && nginx -s reload'
 ```
 
 If the recorded checkout, image ID, volume names, or containers are missing or
@@ -492,18 +661,33 @@ checkout against a partially restored database. Once the old state is
 confirmed, start the original database and original app containers without
 running migrations:
 
-```sh
+```bash
+set -eu
+trap 'docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" stop --timeout 60 poll' ERR
 docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" start db
 docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" exec -T db sh -c \
   'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" start poll
-test "$(docker inspect --format '{{.Image}}' "$(docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" ps -q poll)")" = "$POLL_OLD_IMAGE_ID"
+POLL_RESTORED_CONTAINER_ID="$(docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" ps -q poll)"
+POLL_RESTORED_HOST="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$POLL_RESTORED_CONTAINER_ID" | sed -n 's/^VIRTUAL_HOST=//p')"
+test "$POLL_RESTORED_HOST" = "$POLL_HOST"
+test "$(docker inspect --format '{{.Image}}' "$POLL_RESTORED_CONTAINER_ID")" = "$POLL_OLD_IMAGE_ID"
+docker exec nginx-proxy nginx -t
+docker exec nginx-proxy nginx -T > "$POLL_NGINX_DUMP" 2>&1
+grep -n -B 3 -A 40 -F "server_name $POLL_HOST;" "$POLL_NGINX_DUMP"
+grep -Fq "include /etc/nginx/vhost.d/$POLL_HOST;" "$POLL_NGINX_DUMP"
+grep -Fq 'deny all;' "$POLL_NGINX_DUMP"
+docker exec nginx-proxy grep -Fqx "allow $OPERATOR_CIDR;" "/etc/nginx/vhost.d/$POLL_HOST"
+docker exec nginx-proxy grep -Fqx 'deny all;' "/etc/nginx/vhost.d/$POLL_HOST"
 docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" logs --tail=100 poll db
 ```
 
 Use the temporary workstation hosts entry and operator allowlist to smoke-test
-the restored app. Only after those checks pass should you run the gate-disable
-commands above and restart the recorded scheduled jobs. Writes made during
+the restored app. Repeat the access checks: the operator must not receive 403,
+and a non-allowlisted network must receive 403. If either check fails, stop the
+restored poll service with `docker compose -p "$POLL_PROJECT" -f "$POLL_OLD_COMPOSE" stop --timeout 60 poll`. Only after those checks pass
+should you run the gate-disable commands above and restart the recorded
+scheduled jobs. Writes made during
 private smoke tests are absent from the restored snapshot. Reddit messages
 sent after the snapshot cannot be rolled back; reconcile them manually before
 resuming automation.
