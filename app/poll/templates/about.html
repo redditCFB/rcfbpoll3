@@ -4,13 +4,13 @@
 {% block content %}
     <div class="container">
         <div class="row align-items-start py-3">
-            <div class="nav col-2 nav-pills me-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+            <div class="nav col-12 col-md-2 nav-pills flex-column me-md-3 mb-3 mb-md-0 about-tab-nav" id="v-pills-tab" role="tablist" aria-orientation="vertical">
                 <button class="nav-link {% if page == 'about' %}active{% endif %}" id="v-pills-about-tab" data-bs-toggle="pill" data-bs-target="#v-pills-about" type="button" role="tab" aria-controls="v-pills-about" aria-selected={% if page == 'about' %}"true"{% else %}"false"{% endif %}>About The Poll</button>
                 <button class="nav-link {% if page == 'faq' %}active{% endif %}" id="v-pills-faq-tab" data-bs-toggle="pill" data-bs-target="#v-pills-faq" type="button" role="tab" aria-controls="v-pills-faq" aria-selected={% if page == 'faq' %}"true"{% else %}"false"{% endif %}>FAQ</button>
                 <button class="nav-link {% if page == 'contribute' %}active{% endif %}" id="v-pills-contribute-tab" data-bs-toggle="pill" data-bs-target="#v-pills-contribute" type="button" role="tab" aria-controls="v-pills-contribute" aria-selected={% if page == 'faq' %}"true"{% else %}"false"{% endif %}>How To Contribute</button>
                 <button class="nav-link {% if page == 'voters' %}active{% endif %}" id="v-pills-voters-tab" data-bs-toggle="pill" data-bs-target="#v-pills-voters" type="button" role="tab" aria-controls="v-pills-voters" aria-selected={% if page == 'voters' %}"true"{% else %}"false"{% endif %}>Voter Hall Of Fame</button>
             </div>
-            <div class="col tab-content" id="v-pills-tabContent">
+            <div class="col-12 col-md tab-content about-tab-content" id="v-pills-tabContent">
                 <div class="tab-pane fade {% if page == 'about' %}show active{% endif %}" id="v-pills-about" role="tabpanel" aria-labelledby="v-pills-about-tab" tabindex="0">
                     <h3>About The Poll</h3>
                     {{ about.text | markdown | safe }}
