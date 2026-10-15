@@ -13,8 +13,10 @@ for a future dynamic moderator lookup.
 After migrations, the production deployment's migrate service runs
 screen_open_provisional_applications to reconsider existing OPEN applications.
 The file docker-compose.staging.yml is currently the real production
-deployment despite its name. Follow [the PostgreSQL 18 cutover procedure](docs/postgres18-cutover.md)
-before deploying a version that switches the database image or volume.
+deployment despite its name. Follow [the application-only deployment procedure](docs/application-upgrade.md)
+for this upgrade. It preserves PostgreSQL 17 and the existing production volume.
+The unused `docker-compose.prod.yml` still uses PostgreSQL 13 and is unsupported
+by Django 6.1; it is outside this deployment.
 
 
 ## Local development
@@ -35,13 +37,15 @@ data.
 Local development installs the locked `app/requirements-dev.txt`, which includes
 the runtime requirements, Debug Toolbar, and flake8. Runtime/production images
 install only the locked `app/requirements.txt`; Debug Toolbar is enabled only
-when `DEBUG=1`. Edit the corresponding `.in` files and regenerate both locks
-using Python 3.13 before changing dependencies:
+when `DEBUG=1`. Edit the corresponding `.in` files and regenerate all three locks
+using Python 3.13 before changing dependencies. The browser lock constrains
+its runtime packages to the production lock:
 
 ```sh
 cd app
 uv pip compile requirements.in --python 3.13 --universal -o requirements.txt
 uv pip compile requirements-dev.in --python 3.13 --universal -o requirements-dev.txt
+uv pip compile requirements-browser.in --python 3.13 --universal --constraint requirements.txt -o requirements-browser.txt
 ```
 
 Rebuild the development image after changing dependencies, then run the local
@@ -53,7 +57,7 @@ docker compose run --rm --no-deps --entrypoint flake8 poll .
 
 Flake8 is currently a local check and is not a CI gate.
 
-Run the Chromium-based browser regression for the results filters with:
+Run the Chromium-based browser regression suite with:
 
 ```sh
 docker compose run --rm browser-test
@@ -139,7 +143,10 @@ The expected initial production assignments are configuration only:
 `CFB_Referee` for `NOTIFICATIONS`, and `sirgippy` for both review and results.
 No usernames are hard-coded in the application.
 
-## Poll migration deployment
+## Poll migration deployment (historical baseline only)
+
+This section describes first-time adoption of the poll migration baseline. It
+is not part of the application-only upgrade procedure above.
 
 The poll migration baseline represents the legacy poll tables already present
 in the production database. Before deployment, back up the database and verify

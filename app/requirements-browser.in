@@ -1,0 +1,2 @@
+-r requirements.in
+playwright==1.63.0

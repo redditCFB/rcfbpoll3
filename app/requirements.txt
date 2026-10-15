@@ -14,7 +14,7 @@ cryptography==50.0.1
     # via -r requirements.in
 defusedxml==0.7.1
     # via praw
-django==6.1.1
+django==6.1.2
     # via
     #   -r requirements.in
     #   django-allauth
